@@ -107,7 +107,9 @@ class OodaLoop:
             return None
 
         if rendered.page is not None:                       # Act: register landing page
-            self.client.register_page(state.session_id, rendered.page)
+            page_id = self.client.register_page(state.session_id, rendered.page)
+            if page_id:
+                state.page_ids.add(page_id)
 
         for claim in spec.claims:                           # working memory: story ledger
             self.memory.add_claim(state.session_id, claim.text)
@@ -118,7 +120,11 @@ class OodaLoop:
         )
 
         signals = self.reader.read(                         # Observe
-            result.events, context={"objective": spec.objective.value}
+            result.events,
+            context={
+                "objective": spec.objective.value,
+                "expected_page_ids": frozenset(state.page_ids),
+            },
         )
         state.record_contact(spec, signals)                 # Orient
         self.memory.set_suspicion(state.session_id, signals.suspicion)

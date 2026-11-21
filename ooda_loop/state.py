@@ -42,6 +42,7 @@ class LoopState:
     channels_tried: set[str] = field(default_factory=set)
     senders_tried: set[str] = field(default_factory=set)
     hooks_used: set[str] = field(default_factory=set)
+    page_ids: set[str] = field(default_factory=set)  # landing pages registered this session
     suspicion: float = 0.0
     last_signals: Optional[Signals] = None
     incident: Optional[Incident] = None
