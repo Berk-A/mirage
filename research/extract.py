@@ -69,6 +69,34 @@ TOOL_LEXICON: dict[str, tuple[str, str]] = {
     "terraform": ("Terraform", "app.terraform.io"),
 }
 
+# Account-footprint classification (holehe/maigret hits). A hit names a *service* (a
+# maigret site name like "GitHub", or a holehe domain like "github.com"). We keep this
+# conservative on purpose: a username/email footprint turns up dozens of sites, but only
+# two kinds are worth a fact —
+#   * a real SaaS *login* the founder plausibly uses  → a `uses_tool`/Vendor surface;
+#   * a social/presence *platform*                    → a channel/rapport hook.
+# Everything else (the long tail of forums, music sites, parked handles) is dropped.
+# Keys are matched as substrings of the normalised (alnum-lowercased) service token, so
+# both "GitHub" and "github.com" resolve to the same entry.
+_ACCOUNT_VENDORS: dict[str, str] = {
+    "github": "GitHub", "gitlab": "GitLab", "slack": "Slack", "notion": "Notion",
+    "figma": "Figma", "linear": "Linear", "atlassian": "Atlassian", "jira": "Jira",
+    "dropbox": "Dropbox", "zoom": "Zoom", "docker": "Docker", "calendly": "Calendly",
+    "huggingface": "HuggingFace", "trello": "Trello", "asana": "Asana",
+    "bitbucket": "Bitbucket", "gmail": "Google", "googl": "Google",
+    "microsoft": "Microsoft", "office": "Microsoft", "replit": "Replit",
+    "vercel": "Vercel", "cloudflare": "Cloudflare", "heroku": "Heroku",
+}
+_ACCOUNT_PLATFORMS: dict[str, str] = {
+    "twitter": "X", "xcom": "X", "instagram": "Instagram", "linkedin": "LinkedIn",
+    "reddit": "Reddit", "medium": "Medium", "mastodon": "Mastodon", "bsky": "Bluesky",
+    "bluesky": "Bluesky", "tiktok": "TikTok", "youtube": "YouTube", "facebook": "Facebook",
+    "telegram": "Telegram", "discord": "Discord", "threads": "Threads",
+    "pinterest": "Pinterest", "tumblr": "Tumblr", "twitch": "Twitch", "devto": "Dev.to",
+    "soundcloud": "SoundCloud", "spotify": "Spotify", "producthunt": "Product Hunt",
+    "keybase": "Keybase", "stackoverflow": "Stack Overflow", "wordpress": "WordPress",
+}
+
 # Known investors/VCs → high-signal "backed by" pretexts. A named VC is a strong,
 # flattering intro topic. We also capture generic "<Name> Capital/Ventures/Partners"
 # phrases after a funding trigger, but only when they look like a firm (see _investors_in).
@@ -131,7 +159,9 @@ def extract(doc: RawDoc, seed: Seed) -> list[Fact]:
         facts = _extract_github(doc, seed)
     elif doc.source_type == "feed":
         facts = _extract_feed(doc, seed)
-    else:  # web, talk, ...
+    elif doc.source_type in ("holehe", "maigret"):
+        facts = _extract_account(doc, seed)
+    else:  # web, search, talk, ...
         facts = _extract_web(doc, seed)
     return [f for f in facts if f.object_value.strip() and f.canonical_claim.strip()]
 
@@ -240,6 +270,50 @@ def _extract_github(doc: RawDoc, seed: Seed) -> list[Fact]:
                                claim=f"{name}'s project uses {display}.", confidence=0.55,
                                event_date=doc.published_date))
     return facts
+
+
+def _extract_account(doc: RawDoc, seed: Seed) -> list[Fact]:
+    """holehe/maigret hit → at most one fact, and only for a recognised login or platform.
+
+    The underlying signal is a *guess*: the probed email/username was derived from the
+    public name, so a hit does not prove the account is the founder's. Confidence is kept
+    low to reflect that, and the long tail of unrecognised sites yields nothing."""
+    meta = doc.meta or {}
+    service = str(meta.get("service") or meta.get("site") or "").strip()
+    if not service:
+        return []
+    via = str(meta.get("via") or doc.source_type)
+    url = doc.url
+    name = seed.name
+    kind, display = _classify_account(service)
+    if kind == "vendor":
+        # A real login surface the founder plausibly uses → vendor landing-page material.
+        how = ("registered to their work email" if via == "holehe"
+               else "under a handle they would use")
+        return [_fact(seed, "uses_tool", display, doc,
+                      claim=f"{name} has a {display} account ({how}).",
+                      confidence=0.45)]
+    if kind == "platform":
+        # A social/presence footprint → a channel/rapport hook (where to reach them).
+        return [_fact(seed, "engaged_with", f"their presence on {display}", doc,
+                      claim=f"{name} is active on {display} ({url}).",
+                      confidence=0.4)]
+    return []
+
+
+def _classify_account(service: str) -> tuple[Optional[str], Optional[str]]:
+    """Map a service name/domain to ('vendor'|'platform', display) or (None, None).
+    Vendors win ties (a login surface is the higher-value classification)."""
+    norm = re.sub(r"[^a-z0-9]", "", service.lower())
+    if not norm:
+        return None, None
+    for key, display in _ACCOUNT_VENDORS.items():
+        if key in norm:
+            return "vendor", display
+    for key, display in _ACCOUNT_PLATFORMS.items():
+        if key in norm:
+            return "platform", display
+    return None, None
 
 
 # --------------------------------------------------------------------------- #

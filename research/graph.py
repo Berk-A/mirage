@@ -54,6 +54,11 @@ _VENDOR_LOGIN = {
     "Sentry": "sentry.io", "Vercel": "vercel.com", "Cloudflare": "cloudflare.com",
     "MongoDB": "cloud.mongodb.com", "Grafana": "grafana.com", "Personio": "personio.de",
     "Kubernetes": "kubernetes.io", "Terraform": "app.terraform.io",
+    # Login surfaces discovered via the account-footprint collectors (holehe/maigret).
+    "Google": "accounts.google.com", "Microsoft": "login.microsoftonline.com",
+    "Dropbox": "dropbox.com", "Zoom": "zoom.us", "Calendly": "calendly.com",
+    "HuggingFace": "huggingface.co", "Trello": "trello.com", "Asana": "asana.com",
+    "Bitbucket": "bitbucket.org", "Replit": "replit.com", "Heroku": "id.heroku.com",
 }
 
 # Lookalike sender domain. IMPORTANT: NOT the org's real domain (revel8.ai) — challenge

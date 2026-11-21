@@ -6,6 +6,12 @@ RSS/Atom feeds, conference/talk pages). Login-walled sources (LinkedIn, Instagra
 need a scraping-API or headless backend — see research/ASSESSMENT.md — and would be
 added here behind the same protocol with no change to the pipeline.
 """
+from .accounts import (
+    HoleheCollector,
+    MaigretCollector,
+    holehe_available,
+    maigret_available,
+)
 from .brightdata import BrightDataCollector, brightdata_available
 from .feeds import FeedCollector
 from .github import GitHubCollector
@@ -21,4 +27,8 @@ __all__ = [
     "brightdata_available",
     "SerpApiDiscoveryCollector",
     "serpapi_available",
+    "HoleheCollector",
+    "MaigretCollector",
+    "holehe_available",
+    "maigret_available",
 ]

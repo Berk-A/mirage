@@ -83,9 +83,13 @@ def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = 
         BrightDataCollector,
         FeedCollector,
         GitHubCollector,
+        HoleheCollector,
+        MaigretCollector,
         SerpApiDiscoveryCollector,
         WebCollector,
         brightdata_available,
+        holehe_available,
+        maigret_available,
         serpapi_available,
     )
     from research.pipeline import GraphResearchProvider
@@ -100,4 +104,11 @@ def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = 
         use_brightdata = brightdata_available()
     if use_brightdata:
         collectors.append(BrightDataCollector())
+    # Account-footprint collectors run LAST and only when their CLI is installed, so the
+    # offline/open-tier pipeline is unchanged when the tools (or network) are absent.
+    # They cache to runs/osint_cache so a re-run never re-probes.
+    if holehe_available():
+        collectors.append(HoleheCollector())
+    if maigret_available():
+        collectors.append(MaigretCollector())
     return GraphResearchProvider(PRACTICE_SEEDS, collectors, as_of=as_of)
