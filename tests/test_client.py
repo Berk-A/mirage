@@ -270,6 +270,21 @@ def test_register_page_text_fallback():
 
 
 # --------------------------------------------------------------------------- #
+# Assets (logo upload)
+# --------------------------------------------------------------------------- #
+@responses.activate
+def test_upload_asset_returns_asset_id():
+    responses.add(responses.POST, f"{BASE}/assets",
+                  json={"asset_id": "a_1", "type": "image/png", "size": 10}, status=201)
+    aid = make_client().upload_asset(b"\x89PNG-bytes", filename="logo.png",
+                                     content_type="image/png")
+    assert aid == "a_1"
+    req = responses.calls[0].request
+    assert req.headers["Authorization"] == "Bearer test-key"
+    assert "multipart/form-data" in req.headers["Content-Type"]  # multipart, not JSON
+
+
+# --------------------------------------------------------------------------- #
 # Conversations
 # --------------------------------------------------------------------------- #
 @responses.activate

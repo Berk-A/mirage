@@ -190,6 +190,23 @@ class Revel8Client:
         )
 
     # ------------------------------------------------------------------ #
+    # Assets (images / logos embedded via asset:// in HTML)
+    # ------------------------------------------------------------------ #
+    def upload_asset(self, data: bytes, *, filename: str = "logo.png",
+                     content_type: str = "image/png") -> str:
+        """Upload an image asset (multipart, field `file`) and return its asset_id, to be
+        referenced from mail/page HTML as `asset://<id>`. Separate from `_request` because
+        this is multipart, not JSON."""
+        url = f"{self.base_url}/assets"
+        resp = self.session.post(
+            url, headers={"Authorization": f"Bearer {self.api_key}"},
+            files={"file": (filename, data, content_type)}, timeout=self.timeout,
+        )
+        if resp.status_code >= 400:
+            raise error_for_status(resp.status_code, self._body_of(resp))
+        return str(resp.json().get("asset_id", ""))
+
+    # ------------------------------------------------------------------ #
     # Landing pages
     # ------------------------------------------------------------------ #
     def register_page(self, session_id: str, page: RenderedPage) -> str:

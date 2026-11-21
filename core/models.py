@@ -256,6 +256,9 @@ class Dossier:
     as_of: str = ""
     facts: tuple[Fact, ...] = ()
     gaps: tuple[str, ...] = ()
+    # An uploaded logo asset_id (set by the loop once per session) that the renderer embeds
+    # in the email header / landing page; None falls back to a wordmark badge.
+    logo_asset_id: Optional[str] = None
 
 
 # --------------------------------------------------------------------------- #

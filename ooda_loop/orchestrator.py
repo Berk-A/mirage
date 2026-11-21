@@ -57,6 +57,7 @@ class OodaLoop:
         max_contacts: Optional[int] = None,
     ) -> Transcript:
         dossier = self.dossiers.get_dossier(target_id, scenario_id=scenario_id)
+        dossier = self._brand(dossier)            # upload the company logo once, if we can
         session = self.client.new_session(scenario_id)
 
         budget = session.touch_budget if session.touch_budget is not None else 10
@@ -172,6 +173,28 @@ class OodaLoop:
             incident=signals.incident,
             suspicion=signals.suspicion,
         )
+
+    def _brand(self, dossier):
+        """Best-effort: fetch the company logo and upload it once, so this session's mails
+        and landing page carry real branding. The company is read from the primary sender's
+        domain. Skipped silently when the client can't upload (fakes/tests) or there's no
+        network — the renderer then falls back to a wordmark badge."""
+        if not hasattr(self.client, "upload_asset"):
+            return dossier
+        try:
+            from content.branding import company_from_address, fetch_company_logo
+            senders = getattr(dossier, "senders", ()) or ()
+            company = company_from_address(senders[0].address) if senders else ""
+            if not company:
+                return dossier
+            logo = fetch_company_logo(company)
+            if logo:
+                asset_id = self.client.upload_asset(logo[0], content_type=logo[1])
+                if asset_id:
+                    return replace(dossier, logo_asset_id=asset_id)
+        except Exception:  # noqa: BLE001 — branding is a nicety, never fail a run for it
+            pass
+        return dossier
 
     def _ground(self, spec: MoveSpec, target_id: str) -> MoveSpec:
         """Attach knowledge-graph node ids to claims and drop any that cannot be

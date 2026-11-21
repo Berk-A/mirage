@@ -96,3 +96,29 @@ def test_login_page_is_script_free_and_has_fields():
 def test_email_html_escapes_body():
     html = build_email_html("Hi <b>Tom</b> & team", SENDER, DOSSIER)
     assert "&lt;b&gt;" in html and "&amp;" in html
+
+
+# --------------------------------------------------------------------------- #
+# Branded email + landing page (credibility: logo/wordmark, signature, footer)
+# --------------------------------------------------------------------------- #
+def test_email_html_is_branded_with_signature_and_footer():
+    html = build_email_html("Hi Tom,\n\nQuick note about the talk.\n\nBest,\nLena",
+                            SENDER, DOSSIER)
+    assert "Eventcrew" in html                 # wordmark/company derived from sender domain
+    assert "Lena Hofer" in html                # branded signature block
+    assert "confidential" in html.lower()      # confidentiality footer
+    assert "Best,\nLena" not in html           # trailing sign-off dropped (sig replaces it)
+
+
+def test_email_embeds_real_logo_asset_when_provided():
+    html = build_email_html("Hi", SENDER, DOSSIER, logo_asset_id="a_9")
+    assert "asset://a_9" in html               # real uploaded logo, not just the wordmark
+
+
+def test_login_page_is_branded():
+    from core.models import MoveSpec as MS, Objective as Obj
+    spec = MS(objective=Obj.CREDENTIALS, channel="email",
+              sender=SENDER, url="https://stackit-portal.io/auth", subject="STACKIT: sign in")
+    page = build_login_page(spec, DOSSIER, logo_asset_id="a_7")
+    assert "asset://a_7" in page.html          # vendor logo on the page
+    assert page.fields == ("email", "password")

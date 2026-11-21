@@ -250,17 +250,19 @@ class StudioRenderer:
             body = _truncate(template_body(spec, dossier))
             self.last_fell_back = True
 
+        logo = getattr(dossier, "logo_asset_id", None)
         html = None
         try:
             if spec.channel in LAYOUT_CHANNELS:
-                html = build_email_html(body, spec.sender, dossier, spec.subject)
+                html = build_email_html(body, spec.sender, dossier, spec.subject,
+                                        logo_asset_id=logo)
         except Exception:  # noqa: BLE001 — a layout failure must not fail the render
             html = None
 
         page = None
         try:
             if spec.url:
-                page = build_login_page(spec, dossier)
+                page = build_login_page(spec, dossier, logo_asset_id=logo)
         except Exception:  # noqa: BLE001
             page = None
 
