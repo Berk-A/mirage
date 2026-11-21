@@ -48,9 +48,26 @@ DPO is a bonus on thin data — not the centerpiece.
 
 ## Status
 
-- [ ] Arm + context (archetype) schema
-- [ ] Thompson-sampling contextual bandit
+- [x] Arm + context (archetype) schema
+- [x] Thompson-sampling contextual bandit
 - [ ] Self-play harness against practice targets (via the OODA API client)
 - [ ] Shadow-twin simulator
 - [ ] Grader + hardening
-- [ ] Playbook export
+- [x] Playbook export
+
+## Offline learning API
+
+`Arm(objective, channel, tone, hook_type, sender_type)` uses `Objective` from
+`core.models`. `ContextualBandit(arms, seed=...)` offers `select(archetype)`,
+`update(archetype, arm, reward)`, and `playbook()`. It models the continuous
+rubric-shaped score with a normal posterior, independently for each archetype.
+`RewardRecord(Outcome(...), events=...)` is scored with `reward(record)`.
+
+`load_observations("runs/", target_archetypes={...}, hook_types={...},
+sender_types={...})` reads harness `rows.jsonl` and OODA touch JSONL joined to
+`summary.json`. A harness folder can be mapped by folder name; OODA targets by
+`to`. Missing archetypes are skipped. Missing tone, hook or sender type becomes
+`unknown`: map these explicitly before using those arms to seed live runs.
+`preference_pairs(observations)` builds disjoint high/low pairs per archetype and
+objective; `.dpo_row()` exports conversational TRL input. Real run logs reside in
+gitignored `runs/` in the main checkout; tests use inline fixtures.

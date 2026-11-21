@@ -11,9 +11,10 @@ dependencies = ["requests>=2.31"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "responses>=0.25"]
+training = ["datasets>=3", "peft>=0.14", "trl>=0.15", "transformers>=4.46", "accelerate>=1.2", "bitsandbytes>=0.45"]
 
 [tool.setuptools]
-packages = ["core", "ooda_loop", "content", "research"]
+packages = ["core", "ooda_loop", "content", "research", "mab_experiments"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
