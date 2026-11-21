@@ -38,15 +38,19 @@ def test_real_reader_detects_disclosure_from_a_reply():
     assert memory.final_hash(t.session_id) != "0" * 64
 
 
-def test_credentials_win_confirmed_against_registered_page():
-    # Adaptive flow: an engaging (low-suspicion) reply opens the door; with follow-ups
-    # capped at 0 the loop reorients straight to the credentials ask, registers a landing
-    # page (p_fake1), and the submit on that page confirms the win.
-    reply = Event(id="e1", type=EventType.REPLY, channel="slack",
-                  body="Sure, happy to help — which event is this about?")
+def test_credentials_win_via_escalation_ladder():
+    # Adaptive ladder: an engaging reply opens the door; with follow-ups capped at 0 the
+    # loop escalates cheapest-first — ACTION (a file to open), then CREDENTIALS. Each rung
+    # keeps the thread alive with a reply; the submit (a withheld secret) on the registered
+    # page confirms the credentials win.
+    reply1 = Event(id="e1", type=EventType.REPLY, channel="slack",
+                   body="Sure, happy to help — which event is this about?")
+    reply2 = Event(id="e2", type=EventType.REPLY, channel="slack",
+                   body="Happy to — go on.")
     submit = Event(id="e9", type=EventType.PAGE_SUBMITTED, page_id="p_fake1",
-                   fields=("email", "password"))
-    client = ScriptedClient(script=[[reply], [submit]], touch_budget=10)
+                   fields=("email", "password"),
+                   values={"email": "j@revel8.io", "password": "(entered, not shown)"})
+    client = ScriptedClient(script=[[reply1], [reply2], [submit]], touch_budget=10)
     memory = ThreeTierMemory()
     loop = OodaLoop(client=client, reader=ReactionReader(), memory=memory,
                     dossiers=FakeDossierProvider(), renderer=FakeRenderer(),
@@ -56,8 +60,9 @@ def test_credentials_win_confirmed_against_registered_page():
 
     assert t.won is True
     assert t.incident.objective is Objective.CREDENTIALS
-    assert t.contacts_used == 2
+    assert t.contacts_used == 3
     assert client.pages, "a landing page should have been registered before the submit"
+    assert Objective.ACTION in [c.objective for c in t.contacts]  # went through the file rung
     assert memory.verify_chain(t.session_id) is True
 
 

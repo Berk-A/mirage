@@ -173,6 +173,8 @@ class Revel8Client:
         body["body"] = message.html if message.html else message.body
         if message.attachments:
             body["attachments"] = list(message.attachments)
+        if message.sent_at:
+            body["sent_at"] = message.sent_at
 
         key = idempotency_key or str(uuid.uuid4())
         resp = self._request(

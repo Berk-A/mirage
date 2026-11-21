@@ -85,7 +85,9 @@ class FakeRenderer:
             body=body,
             sender=spec.sender,
             subject=spec.subject,
+            attachments=({"filename": spec.attachment},) if spec.attachment else (),
             page=page,
+            sent_at=spec.sent_at,
         )
 
 

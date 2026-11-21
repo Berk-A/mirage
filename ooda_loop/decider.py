@@ -18,6 +18,7 @@ The `_pick_*` seams stay the place a contextual bandit (mab_experiments) plugs i
 """
 from __future__ import annotations
 
+import re
 from typing import Optional
 
 from core.models import (
@@ -51,6 +52,11 @@ BUDGET_TIGHT = 2
 # than rotating channels with a fresh template (see experiments/OODA_FINDINGS.md).
 MAX_FOLLOWUPS_PER_OBJECTIVE = 2
 
+# Story-time pacing (minutes). Touches that all land at once read as "being chased"
+# (target-API "Time"); we space them: a few hours after a reply, ~a day after silence.
+PACE_ENGAGED_MIN = 180      # 3h — a natural back-and-forth cadence
+PACE_SILENT_MIN = 1200      # 20h — wait roughly a day before re-touching a quiet thread
+
 # Engagement state drives the elicitation tactic (docs/ELICITATION_AND_PROFILING.md).
 # Derived from the last signals: COLD (no reply / silence) -> rapport-first openers;
 # ENGAGED (replied, low suspicion) -> the extraction tactics; GUARDED (replied, rising
@@ -78,12 +84,18 @@ class Decider:
         suspicion_abort: float = SUSPICION_ABORT,
         max_followups_per_objective: int = MAX_FOLLOWUPS_PER_OBJECTIVE,
         budget_tight: int = BUDGET_TIGHT,
+        pace: bool = True,
+        pace_engaged_min: int = PACE_ENGAGED_MIN,
+        pace_silent_min: int = PACE_SILENT_MIN,
     ) -> None:
         self.channel_order = channel_order
         self.max_attempts = max_attempts_per_objective
         self.suspicion_abort = suspicion_abort
         self.max_followups = max_followups_per_objective
         self.budget_tight = budget_tight
+        self.pace = pace
+        self.pace_engaged_min = pace_engaged_min
+        self.pace_silent_min = pace_silent_min
 
     def decide(self, state: LoopState, dossier: Dossier) -> Decision:
         if state.incident is not None:
@@ -97,23 +109,31 @@ class Decider:
         sender = self._pick_sender(dossier)
         hook = self._pick_hook(state, dossier)
         engagement = self._engagement_state(state)
+        sent_at = self._stamp(state)   # story-time clock: space touches, never backwards
 
         # ENGAGED: the target replied (the "door" is open — channel-recon shows the first
         # reply is a guarded identity-probe, not a win). First ANSWER them in-thread on
-        # their channel (reply-aware) to build credibility; after a couple of exchanges,
-        # REORIENT to the event-backed ask — credentials, which registers a landing page
-        # (a grader-proof page.submitted win, and the Craft artifact).
+        # their channel (reply-aware) to build credibility; then REORIENT up the
+        # event-backed ladder cheapest-first: ACTION (open a file -> attachment.opened),
+        # then CREDENTIALS (sign in -> page.submitted). Both are grader-proof event wins.
         if sig is not None and sig.replied and state.suspicion < self.suspicion_abort:
             channel = sig.reply_channel or self._pick_open_channel(state)
-            if state.followups_on_current < self.max_followups and not state.pushed_ask:
+            escalating = state.pushed_action or state.pushed_ask
+            if (state.followups_on_current < self.max_followups and not escalating):
                 return Decision.act(self._build_move(
                     Objective.DISCLOSURE, channel, sender, hook, dossier,
-                    engagement=engagement, attempt=state.followups_on_current,
+                    engagement=engagement, attempt=state.followups_on_current, sent_at=sent_at,
+                    prior_message=state.last_message_body, prior_reply=state.last_reply))
+            if not state.pushed_action:
+                state.pushed_action = True
+                return Decision.act(self._build_move(
+                    Objective.ACTION, channel, sender, hook, dossier,
+                    engagement=engagement, attempt=state.followups_on_current, sent_at=sent_at,
                     prior_message=state.last_message_body, prior_reply=state.last_reply))
             state.pushed_ask = True
             return Decision.act(self._build_move(
                 Objective.CREDENTIALS, channel, sender, hook, dossier,
-                engagement=engagement, attempt=state.followups_on_current,
+                engagement=engagement, attempt=state.followups_on_current, sent_at=sent_at,
                 prior_message=state.last_message_body, prior_reply=state.last_reply))
 
         # NOT ENGAGED (silence or the first move): REORIENT to a fresh interactive channel
@@ -123,8 +143,19 @@ class Decider:
         objective = (Objective.CREDENTIALS if state.contacts_left <= self.budget_tight
                      else Objective.DISCLOSURE)
         return Decision.act(self._build_move(objective, channel, sender, hook, dossier,
-                                             engagement=engagement,
+                                             engagement=engagement, sent_at=sent_at,
                                              attempt=len(state.channels_tried)))
+
+    def _stamp(self, state: LoopState) -> Optional[str]:
+        """Advance the story clock by a realistic gap (based on how the last contact went)
+        and return the ISO timestamp for this move. Returns None when pacing is off."""
+        if not self.pace:
+            return None
+        if state.contacts_used > 0:
+            sig = state.last_signals
+            replied = sig is not None and sig.replied
+            state.advance_story(self.pace_engaged_min if replied else self.pace_silent_min)
+        return state.story_time.isoformat()
 
     # ---- choices (the seams a bandit will later own) --------------------- #
     def _pick_open_channel(self, state: LoopState) -> str:
@@ -189,6 +220,7 @@ class Decider:
         *,
         engagement: str = "cold",
         attempt: int = 0,
+        sent_at: Optional[str] = None,
         prior_message: Optional[str] = None,
         prior_reply: Optional[str] = None,
     ) -> MoveSpec:
@@ -200,12 +232,14 @@ class Decider:
 
         subject = None
         url = None
+        attachment = None
         if objective is Objective.DISCLOSURE:
             ask = f"confirm an internal detail about {topic}"
             subject = f"Quick question on {topic}"
         elif objective is Objective.ACTION:
-            ask = f"open the shared file about {topic}"
+            ask = f"open the shared file about {topic} and take a look"
             subject = f"{topic}: please review"
+            attachment = f"{self._slug(topic)}.pdf"   # declared file -> attachment.opened
         else:  # CREDENTIALS
             ask = f"sign in to continue with {topic}"
             subject = f"Action needed: {topic}"
@@ -226,9 +260,17 @@ class Decider:
             tone="colleague" if channel in ("slack", "whatsapp") else "professional",
             subject=subject if channel in ("email", "calendar_invite") else None,
             url=url,
+            attachment=attachment,
+            sent_at=sent_at,
             prior_message=prior_message,
             prior_reply=prior_reply,
         )
+
+    @staticmethod
+    def _slug(text: str) -> str:
+        """A filename-safe slug from a hook topic (for a declared attachment)."""
+        s = re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+        return s[:40] or "shared_document"
 
     @staticmethod
     def _lookalike_login(dossier: Dossier) -> str:

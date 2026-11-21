@@ -57,3 +57,21 @@ def test_credentials_move_carries_lookalike_url():
     decision = Decider().decide(state, d)
     assert decision.move.objective is Objective.CREDENTIALS
     assert decision.move.url and "example-portal-login.de" in decision.move.url
+
+
+def test_pacing_stamps_moves_and_only_moves_forward():
+    # Story-time pacing: every move is stamped, and the clock only advances (a silent
+    # contact waits ~a day), so touches never collide or go backwards.
+    state, d = make_state()
+    dec = Decider()
+    m1 = dec.decide(state, d).move
+    assert m1.sent_at is not None
+    state.contacts_used = 1
+    state.last_signals = Signals(events=(), replied=False)   # silence -> big gap
+    m2 = dec.decide(state, d).move
+    assert m2.sent_at > m1.sent_at   # ISO 8601, same offset -> lexical compare holds
+
+
+def test_pacing_can_be_disabled():
+    state, d = make_state()
+    assert Decider(pace=False).decide(state, d).move.sent_at is None

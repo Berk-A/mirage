@@ -285,6 +285,12 @@ class MoveSpec:
     tone: str = ""
     subject: Optional[str] = None
     url: Optional[str] = None  # landing page to register+link, if any
+    # A declared attachment the recipient may open (filename only — the API records
+    # attachment.opened if they do). Set for the ACTION objective ("open this file").
+    attachment: Optional[str] = None
+    # Story-time stamp (ISO 8601) for this contact, so touches don't all land at the
+    # same instant. None lets the API place it at the previous contact's moment.
+    sent_at: Optional[str] = None
     # Thread context for a reply-aware follow-up. When `prior_reply` is set, this move
     # continues an open thread: the writer must ANSWER what the target said rather than
     # re-send a fresh ask. Both are plain text (what we last sent, what they replied).
@@ -303,6 +309,7 @@ class RenderedMessage:
     html: Optional[str] = None
     attachments: tuple[Any, ...] = ()
     page: Optional["RenderedPage"] = None
+    sent_at: Optional[str] = None  # ISO 8601 story time; carried through to the API
 
 
 @dataclass(frozen=True)

@@ -39,14 +39,30 @@ def test_silence_rotates_not_followup():
     assert d.move.prior_reply is None                       # a fresh ask, not a follow-up
 
 
-def test_followups_capped_then_reorients_to_the_ask():
+def test_followups_capped_then_escalates_action_then_credentials():
+    # Follow-ups capped -> escalate the event-backed ladder cheapest-first:
+    # ACTION (open a file) then CREDENTIALS (sign in), both still in-thread.
     st = _state()
     st.last_signals = _reply()
     st.last_reply = "who are you?"
     st.followups_on_current = 2                             # at the cap (default 2)
-    d = Decider().decide(st, DOSSIER)
-    assert d.move.objective is Objective.CREDENTIALS        # reoriented to the event-backed ask
-    assert d.move.prior_reply is not None                   # still answering in-thread
+    dec = Decider()
+    first = dec.decide(st, DOSSIER)
+    assert first.move.objective is Objective.ACTION         # cheapest event-backed ask
+    assert first.move.attachment and first.move.attachment.endswith(".pdf")
+    assert first.move.prior_reply is not None               # still answering in-thread
+    second = dec.decide(st, DOSSIER)                         # pushed_action now set
+    assert second.move.objective is Objective.CREDENTIALS
+    assert second.move.prior_reply is not None
+
+
+def test_renderer_propagates_attachment_and_sent_at():
+    spec = MoveSpec(objective=Objective.ACTION, channel="email",
+                    sender=Sender("Lena", "lena@eventcrew-muc.de"), ask="open it",
+                    attachment="brief.pdf", sent_at="2026-11-23T09:00:00+01:00")
+    msg = FakeRenderer().render(spec, DOSSIER)
+    assert msg.attachments == ({"filename": "brief.pdf"},)
+    assert msg.sent_at == "2026-11-23T09:00:00+01:00"
 
 
 def test_writer_uses_followup_prompt_when_threaded():

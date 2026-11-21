@@ -264,13 +264,19 @@ class StudioRenderer:
         except Exception:  # noqa: BLE001
             page = None
 
+        # A declared attachment (filename only) — the recipient may open it, which the
+        # API reports as attachment.opened (the ACTION win).
+        attachments = ({"filename": spec.attachment},) if spec.attachment else ()
+
         return RenderedMessage(
             channel=spec.channel,
             body=body,
             sender=spec.sender,
             subject=spec.subject,
             html=html,
+            attachments=attachments,
             page=page,
+            sent_at=spec.sent_at,
         )
 
     def _write(self, spec: MoveSpec, dossier: Dossier) -> str:

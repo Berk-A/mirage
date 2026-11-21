@@ -150,6 +150,40 @@ def test_send_message_prefers_html_body():
 
 
 @responses.activate
+def test_send_message_includes_sent_at_and_attachments():
+    responses.add(responses.POST, f"{BASE}/sessions/s_1/messages",
+                  json={"message_id": "m_a", "touches_used": 1, "events": []}, status=200)
+    msg = RenderedMessage(
+        channel="email", body="hi",
+        sender=Sender(name="Lena", address="l@e.test"),
+        attachments=({"filename": "brief.pdf"},),
+        sent_at="2026-11-23T09:40:00+01:00",
+    )
+    make_client().send_message("s_1", msg, to="tom")
+    sent = _body(responses.calls[0])
+    assert sent["sent_at"] == "2026-11-23T09:40:00+01:00"
+    assert sent["attachments"] == [{"filename": "brief.pdf"}]
+
+
+@responses.activate
+def test_send_message_parses_page_submitted_values():
+    responses.add(
+        responses.POST, f"{BASE}/sessions/s_1/messages",
+        json={"message_id": "m_v", "touches_used": 1, "events": [
+            {"id": "e_1", "type": "page.submitted", "page_id": "p_1",
+             "fields": ["email", "password"],
+             "values": {"email": "t@r.io", "password": "(entered, not shown)"}}]},
+        status=200,
+    )
+    res = make_client().send_message(
+        "s_1", RenderedMessage(channel="email", body="x", sender=Sender(name="A")),
+        to="tom")
+    ev = res.events[0]
+    assert ev.values["email"] == "t@r.io"
+    assert ev.values["password"] == "(entered, not shown)"
+
+
+@responses.activate
 def test_send_message_uses_caller_idempotency_key():
     responses.add(responses.POST, f"{BASE}/sessions/s_1/messages",
                   json={"message_id": "m_3", "touches_used": 1, "events": []},

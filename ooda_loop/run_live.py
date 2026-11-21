@@ -1,15 +1,18 @@
 """Live plumbing smoke test: drive one real practice session end-to-end.
 
-This wires the REAL API client, reader and memory, but still uses the placeholder
-`FakeDossierProvider` and `FakeRenderer`. So it verifies the *pipeline* — auth, send,
-event parsing, suspicion/incident reading, the replay journal — NOT attack efficacy.
-Real incidents need the research dossier and the content studio (not built yet), so
-expect silence/low engagement from the neutral placeholder messages.
+Defaults to the cheap transport check — real API client/reader/memory, but a
+`FakeDossierProvider` + `FakeRenderer` — so it verifies the *pipeline* (auth, send,
+event parsing, suspicion/incident reading, the replay journal) without model or crawl
+cost. The research KG and the content studio DO exist: pass `--provider real` to wire
+the live OSINT `GraphResearchProvider`, and `--renderer studio` for the abliterated
+writer (needs a served model at MIRAGE_LLM_BASE). For the full real run with the
+recording/caching harness, prefer `experiments/run_ooda.py --provider real`.
 
 Keep `--max-contacts` small; practice sessions are unlimited but each costs touches.
 
     set -a; source .env; set +a
     .venv/bin/python -m ooda_loop.run_live --target julius --max-contacts 3
+    .venv/bin/python -m ooda_loop.run_live --target tom --provider real --renderer studio
 """
 from __future__ import annotations
 
@@ -43,24 +46,33 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--journal-dir", default="runs")
     p.add_argument("--renderer", choices=("fake", "studio"), default="fake",
                    help="'studio' uses the real Content studio (needs a served model)")
+    p.add_argument("--provider", choices=("fake", "real"), default="fake",
+                   help="'real' wires the live OSINT GraphResearchProvider + its grounding")
     args = p.parse_args(argv)
 
     if not os.getenv("REVEL8_API_KEY"):
         print("REVEL8_API_KEY not set. Run: set -a; source .env; set +a", file=sys.stderr)
         return 2
 
+    if args.provider == "real":
+        from research.seeds import default_provider
+        prov = default_provider()            # GraphResearchProvider: Dossier + Grounding
+        dossiers, grounding = prov, prov
+    else:
+        dossiers, grounding = FakeDossierProvider(), FakeGrounding(default="n_live")
+
     loop = OodaLoop(
         client=Revel8Client(),
         reader=ReactionReader(),
         memory=ThreeTierMemory(path=args.journal_dir),
-        dossiers=FakeDossierProvider(),   # placeholder until research lands
+        dossiers=dossiers,
         renderer=_build_renderer(args.renderer),
         decider=Decider(),
-        grounding=FakeGrounding(default="n_live"),
+        grounding=grounding,
     )
 
     print(f"Running up to {args.max_contacts} contact(s) against '{args.target}' "
-          f"(scenario={args.scenario}, renderer={args.renderer}, placeholder dossier)...\n")
+          f"(scenario={args.scenario}, renderer={args.renderer}, provider={args.provider})...\n")
     t = loop.run_session(args.target, scenario_id=args.scenario,
                          max_contacts=args.max_contacts)
 

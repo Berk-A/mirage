@@ -6,9 +6,19 @@ what we have tried, how suspicious the target seems, and whether we have won.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from core.models import Dossier, Incident, MoveSpec, Objective, Signals
+
+# German time — the API reads a naive sent_at as CET; we send an explicit offset.
+_CET = timezone(timedelta(hours=1))
+
+
+def _story_anchor() -> datetime:
+    """Where the session's story clock starts. Real wall-clock at session build, to the
+    second, so sent_at is plausible and monotonic; the decider only moves it forward."""
+    return datetime.now(_CET).replace(microsecond=0)
 
 
 @dataclass
@@ -55,11 +65,27 @@ class LoopState:
     # "suspicious"), and whether we've advanced from the door-opener to the event-backed
     # ask on the open thread. Lets the decider avoid dead channels and reorient.
     channel_outcomes: dict[str, str] = field(default_factory=dict)
+    # Event-backed escalation ladder on an open thread (cheapest-first): after the
+    # disclosure door-opener, push an ACTION (open a file), then CREDENTIALS (sign in).
+    pushed_action: bool = False
     pushed_ask: bool = False
+    # Story-time clock: anchor + minutes elapsed. The decider stamps each contact with
+    # `story_time` and advances the clock so touches don't all land at once.
+    story_start: datetime = field(default_factory=_story_anchor)
+    story_minutes: int = 0
 
     @property
     def contacts_left(self) -> int:
         return max(0, self.budget - self.contacts_used)
+
+    @property
+    def story_time(self) -> datetime:
+        return self.story_start + timedelta(minutes=self.story_minutes)
+
+    def advance_story(self, minutes: int) -> None:
+        """Move story time forward (only ever forward — the API 409s on a sent_at that
+        is not after the previous contact's)."""
+        self.story_minutes += max(0, int(minutes))
 
     def current_objective(self) -> Optional[Objective]:
         if self.obj_index >= len(self.objective_queue):
