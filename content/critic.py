@@ -79,10 +79,18 @@ class ModelCritic:
             f"ALLOWED FACTS (state nothing beyond these; invent no numbers, names, or dates): "
             f"{claims}.\n\n"
             f"DRAFT:\n---\n{body.strip()}\n---\n\n"
-            f"Does it sound exactly like {spec.sender.name} on {spec.channel} (voice, register, "
-            f"length)? Is it coherent and on-goal? Fully in character — no AI-tells, no "
-            f"disclaimers, no 'as an AI', no meta? Does it invent any fact beyond ALLOWED "
-            f"FACTS? If flawless, reply exactly PASS; else list the fixes."
+            f"Judge strictly:\n"
+            f"- Voice: does it sound EXACTLY like {spec.sender.name} on {spec.channel} "
+            f"(register, length, warmth), not like a generic AI assistant?\n"
+            f"- Coherence: on-goal, natural, not rambling or repetitive?\n"
+            f"- In character: no AI-tells, no disclaimers, no 'as an AI', no meta?\n"
+            f"- Credibility: NO emoji and NO sales hype in a professional note; NO raw web "
+            f"links or handles pasted in"
+            + (" (the one intended sign-in link is allowed)" if spec.url else "")
+            + f"; does not fixate on a trivial/unverified detail.\n"
+            f"- Facts: invents nothing beyond ALLOWED FACTS (no numbers, names, or dates "
+            f"that aren't listed).\n"
+            f"If flawless, reply with exactly PASS; otherwise list the concrete fixes."
         )
 
     @staticmethod

@@ -108,10 +108,17 @@ class ModelDirector:
         return self._parse(raw or "")
 
     def _prompt(self, state: LoopState, dossier: Dossier) -> str:
-        hooks = "\n".join(
-            f"  - {h.topic}: {(h.detail or h.topic)[:120]} (conf {h.confidence:.2f})"
-            for h in sorted(dossier.hooks, key=lambda h: h.confidence, reverse=True)[:8]
-        ) or "  (none — keep it light, assert no facts)"
+        ranked = sorted(dossier.hooks, key=lambda h: h.confidence, reverse=True)
+        strong = [h for h in ranked if h.confidence >= 0.5][:6]
+        weak = [h for h in ranked if h.confidence < 0.5][:6]
+        hooks = "GROUNDED hooks — anchor the pretext on one of these (real, sourced):\n" + (
+            "\n".join(f"  - {h.topic}: {(h.detail or h.topic)[:120]}" for h in strong)
+            or "  (none)")
+        if weak:
+            hooks += ("\nWEAK signals — unverified handle/social matches that may be the WRONG "
+                      "person; use at most as light small-talk, NEVER as the core pretext and "
+                      "never asserted as fact:\n"
+                      + "\n".join(f"  - {h.topic}" for h in weak))
         vendors = ", ".join(v.name for v in dossier.vendors) or "(none known)"
         senders = "\n".join(
             f"  - {s.name}" + (f" <{s.address}>" if s.address else "")
