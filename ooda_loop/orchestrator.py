@@ -124,6 +124,7 @@ class OodaLoop:
             context={
                 "objective": spec.objective.value,
                 "expected_page_ids": frozenset(state.page_ids),
+                "target_role": getattr(dossier, "role", "") or "",
             },
         )
         state.last_message_body = rendered.body              # thread memory for follow-ups

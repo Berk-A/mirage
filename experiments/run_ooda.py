@@ -162,16 +162,21 @@ def main(argv=None) -> int:
         from research.synthetic_kg import SyntheticKnowledgeGraph
         base_kg = SyntheticKnowledgeGraph()
         print("provider: synthetic stub")
+    from content.llm import OpenAICompatLLM
+    from ooda_loop.grading import LLMDisclosureGrader
+
     kg = _CachingProvider(base_kg)          # dossier built once per target, reused
     renderer = StudioRenderer()             # live abliterated writer
+    grader = LLMDisclosureGrader(OpenAICompatLLM())   # model judge for disclosure (no event)
     targets = [t.strip() for t in a.targets.split(",") if t.strip()]
     results = []
 
     for tgt in targets:
         _dump_dossier(kg.get_dossier(tgt), f"{out}/{tgt}_dossier.json")  # research/KG stage
         rec = RecordingClient(Revel8Client(), f"{out}/{tgt}.jsonl")
-        loop = OodaLoop(client=rec, reader=ReactionReader(), memory=ThreeTierMemory(),
-                        dossiers=kg, renderer=renderer, decider=Decider(), grounding=kg)
+        loop = OodaLoop(client=rec, reader=ReactionReader(disclosure_grader=grader),
+                        memory=ThreeTierMemory(), dossiers=kg, renderer=renderer,
+                        decider=Decider(), grounding=kg)
         t0 = time.time()
         tr = loop.run_session(tgt, max_contacts=a.max_contacts)
         dt = time.time() - t0

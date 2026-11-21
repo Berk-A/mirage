@@ -72,9 +72,11 @@ def test_reply_volunteering_internal_fact_is_disclosure_incident():
     assert s.reply_channel == "email"
 
 
-def test_link_opened_only_is_engagement_not_incident():
+def test_link_opened_is_a_confirmed_action_win():
+    # events are ground truth: an opened link is a confirmed action incident.
     s = R.read([link_opened()])
-    assert s.incident is None
+    assert s.incident is not None
+    assert s.incident.objective is Objective.ACTION
     assert s.opened_link is True
     assert s.replied is False
     assert s.silent is False
