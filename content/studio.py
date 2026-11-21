@@ -54,6 +54,32 @@ FORMAL_SIGNOFFS = ("best regards", "kind regards", "warm regards", "sincerely", 
 
 _URL_RE = re.compile(r"https?://\S+")
 
+# Hard ceiling on a shipped body. An abliterated model can run on well past the
+# requested length (repetition loops, dumped reasoning); we never ship a wall of text.
+MAX_BODY_CHARS = 6000
+
+
+def template_body(spec: MoveSpec, dossier: Dossier) -> str:
+    """Deterministic, leak-free fallback body. Used whenever the model returns nothing,
+    raises, or can never satisfy the critic — so the pipeline never ships empty or dirty."""
+    name_src = (dossier.display_name or dossier.target_id or "there").strip()
+    name = name_src.split()[0] if name_src.split() else "there"
+    ask = (spec.ask or "follow up on this").strip()
+    tail = f"\n\n{spec.url}" if spec.url else ""
+    sender = (spec.sender.name if spec.sender else "").strip() or "—"
+    return f"Hi {name},\n\nCould you {ask}?{tail}\n\n{sender}"
+
+
+def _truncate(text: str, limit: int = MAX_BODY_CHARS) -> str:
+    """Clamp to `limit` chars, preferring to cut on a whitespace boundary."""
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    sp = cut.rfind(" ")
+    if sp > limit * 0.6:  # only honour the boundary if it isn't way too early
+        cut = cut[:sp]
+    return cut.rstrip()
+
 
 # --------------------------------------------------------------------------- #
 @dataclass
@@ -75,8 +101,7 @@ class Writer:
             {"role": "system", "content": WRITER_SYSTEM},
             {"role": "user", "content": writer_user_prompt(spec, dossier)},
         ]
-        body = (self.llm.complete(msgs, model=self.model,
-                                  temperature=self.temperature) or "").strip()
+        body = self._complete(msgs)
         return body or self._fallback(spec, dossier)
 
     def rewrite(self, spec: MoveSpec, dossier: Dossier, draft: str,
@@ -85,17 +110,22 @@ class Writer:
             {"role": "system", "content": WRITER_SYSTEM},
             {"role": "user", "content": rewrite_user_prompt(spec, dossier, draft, issues)},
         ]
-        body = (self.llm.complete(msgs, model=self.model,
-                                  temperature=self.temperature) or "").strip()
-        return body or draft
+        body = self._complete(msgs)
+        return body or draft or self._fallback(spec, dossier)
+
+    def _complete(self, msgs: list[dict]) -> str:
+        """One guarded model call: any transport/HTTP/timeout error or junk payload
+        collapses to '' so the caller routes to the template fallback instead of raising."""
+        try:
+            raw = self.llm.complete(msgs, model=self.model, temperature=self.temperature)
+        except Exception:  # noqa: BLE001 — timeouts, HTTP errors, decode errors, anything
+            return ""
+        return (raw or "").strip()
 
     @staticmethod
     def _fallback(spec: MoveSpec, dossier: Dossier) -> str:
         """Used only if the model returns nothing, so the pipeline never sends empty."""
-        name = (dossier.display_name or dossier.target_id).split()[0]
-        ask = spec.ask or "follow up on this"
-        tail = f"\n\n{spec.url}" if spec.url else ""
-        return f"Hi {name},\n\nCould you {ask}?{tail}\n\n{spec.sender.name}"
+        return template_body(spec, dossier)
 
 
 class Critic:
@@ -171,23 +201,60 @@ class StudioRenderer:
         self.writer = writer or Writer(llm)
         self.critic = critic or Critic()
         self.humanizer = humanizer or Humanizer()
-        self.max_regens = max_regens
+        self.max_regens = max(0, int(max_regens))
+        # Instrumentation: how many rewrite rounds the last render() used, and whether
+        # it had to ship the deterministic template because the model never came clean.
+        self.last_regens: int = 0
+        self.last_fell_back: bool = False
 
     def render(self, spec: MoveSpec, dossier: Dossier) -> RenderedMessage:
-        body = self.writer.write(spec, dossier)
+        # render() is a hard boundary: it must ALWAYS return a valid, non-empty
+        # RenderedMessage. Every model touch is guarded; the critic loop is bounded;
+        # output is clamped; and if nothing clean survives we ship the template.
+        self.last_regens = 0
+        self.last_fell_back = False
+
+        body = self._write(spec, dossier)
         critique = self.critic.review(body, spec, dossier)
+
         attempts = 0
         while not critique.ok and attempts < self.max_regens:
-            body = self.writer.rewrite(spec, dossier, body, critique.issues)
+            body = self._rewrite(spec, dossier, body, critique.issues)
             critique = self.critic.review(body, spec, dossier)
             attempts += 1
+        self.last_regens = attempts
 
-        body = self.humanizer.humanize(body, channel=spec.channel)
+        # The model never produced critic-clean output within budget: fall back to the
+        # deterministic template, which is leak-free by construction. This guarantees the
+        # shipped body carries no AI-tell / injection phrasing even when the writer loops.
+        if not critique.ok:
+            body = template_body(spec, dossier)
+            self.last_fell_back = True
+
+        body = _truncate(body or "")
+        try:
+            body = self.humanizer.humanize(body, channel=spec.channel)
+        except Exception:  # noqa: BLE001 — humanizer is pure, but never let it break render
+            body = (body or "").strip()
+
+        # Last guard: never ship an empty body.
+        if not (body or "").strip():
+            body = _truncate(template_body(spec, dossier))
+            self.last_fell_back = True
 
         html = None
-        if spec.channel in LAYOUT_CHANNELS:
-            html = build_email_html(body, spec.sender, dossier, spec.subject)
-        page = build_login_page(spec, dossier) if spec.url else None
+        try:
+            if spec.channel in LAYOUT_CHANNELS:
+                html = build_email_html(body, spec.sender, dossier, spec.subject)
+        except Exception:  # noqa: BLE001 — a layout failure must not fail the render
+            html = None
+
+        page = None
+        try:
+            if spec.url:
+                page = build_login_page(spec, dossier)
+        except Exception:  # noqa: BLE001
+            page = None
 
         return RenderedMessage(
             channel=spec.channel,
@@ -197,3 +264,18 @@ class StudioRenderer:
             html=html,
             page=page,
         )
+
+    def _write(self, spec: MoveSpec, dossier: Dossier) -> str:
+        """Guarded writer call — even a writer that raises falls to the template."""
+        try:
+            return self.writer.write(spec, dossier) or template_body(spec, dossier)
+        except Exception:  # noqa: BLE001
+            self.last_fell_back = True
+            return template_body(spec, dossier)
+
+    def _rewrite(self, spec: MoveSpec, dossier: Dossier, draft: str,
+                 issues: list[str]) -> str:
+        try:
+            return self.writer.rewrite(spec, dossier, draft, issues) or draft
+        except Exception:  # noqa: BLE001
+            return draft

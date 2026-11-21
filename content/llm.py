@@ -10,12 +10,31 @@ critic a smaller model; both are just OpenAI-compatible endpoints here.
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass
 from typing import Callable, Optional, Protocol, Sequence, runtime_checkable
 
 import requests
 
 Message = dict  # {"role": "system"|"user"|"assistant", "content": str}
+
+# HTTP statuses worth retrying (transient / overloaded server). Everything else >= 400
+# (400/401/403/404/422, ...) is a client error and raises immediately.
+RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
+
+# Backoff cap and base, in seconds.
+_BACKOFF_CAP = 5.0
+_BACKOFF_BASE = 0.5
+
+
+def _backoff(attempt: int) -> float:
+    """Capped exponential backoff for a 1-based retry `attempt`."""
+    return min(_BACKOFF_CAP, _BACKOFF_BASE * (2 ** (attempt - 1)))
+
+
+def _sleep(seconds: float) -> None:
+    """Module-level sleep so tests can patch it (patch `content.llm._sleep`)."""
+    time.sleep(seconds)
 
 
 @runtime_checkable
@@ -40,6 +59,7 @@ class LLMConfig:
     writer_model: str = os.getenv("MIRAGE_WRITER_MODEL", "writer")
     critic_model: str = os.getenv("MIRAGE_CRITIC_MODEL", "critic")
     timeout: float = float(os.getenv("MIRAGE_LLM_TIMEOUT", "120"))
+    max_retries: int = int(os.getenv("MIRAGE_LLM_MAX_RETRIES", "3"))
 
 
 class OpenAICompatLLM:
@@ -48,9 +68,20 @@ class OpenAICompatLLM:
     def __init__(self, config: Optional[LLMConfig] = None, *, session=None) -> None:
         self.config = config or LLMConfig()
         self._session = session or requests.Session()
+        # Instrumentation, refreshed on every `complete` call.
+        self.last_latency_ms: float = 0.0
+        self.last_usage: Optional[dict] = None
+        self.last_error: Optional[str] = None
 
     def complete(self, messages, *, model=None, temperature=0.7, max_tokens=800,
                  stop=None) -> str:
+        """Call the chat endpoint with bounded retries and capped backoff.
+
+        Retries on requests timeouts, connection errors, and transient HTTP statuses
+        (`RETRYABLE_STATUSES`). Non-retryable client errors (400/401/403/404/422, ...)
+        raise at once via `raise_for_status`. After the call, `last_latency_ms`,
+        `last_usage` and `last_error` are updated on the instance.
+        """
         payload = {
             "model": model or self.config.writer_model,
             "messages": list(messages),
@@ -59,16 +90,46 @@ class OpenAICompatLLM:
         }
         if stop:
             payload["stop"] = list(stop)
-        resp = self._session.post(
-            f"{self.config.base_url.rstrip('/')}/chat/completions",
-            json=payload,
-            headers={"Authorization": f"Bearer {self.config.api_key}",
-                     "Content-Type": "application/json"},
-            timeout=self.config.timeout,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        return (data["choices"][0]["message"]["content"] or "").strip()
+        url = f"{self.config.base_url.rstrip('/')}/chat/completions"
+        headers = {"Authorization": f"Bearer {self.config.api_key}",
+                   "Content-Type": "application/json"}
+
+        self.last_usage = None
+        self.last_error = None
+        start = time.monotonic()
+        attempt = 0
+        try:
+            while True:
+                try:
+                    resp = self._session.post(
+                        url, json=payload, headers=headers,
+                        timeout=self.config.timeout,
+                    )
+                except (requests.exceptions.Timeout,
+                        requests.exceptions.ConnectionError) as exc:
+                    self.last_error = f"{type(exc).__name__}: {exc}"
+                    if attempt < self.config.max_retries:
+                        attempt += 1
+                        _sleep(_backoff(attempt))
+                        continue
+                    raise
+
+                status = resp.status_code
+                if status in RETRYABLE_STATUSES and attempt < self.config.max_retries:
+                    self.last_error = f"HTTP {status}"
+                    attempt += 1
+                    _sleep(_backoff(attempt))
+                    continue
+                if status >= 400:
+                    self.last_error = f"HTTP {status}"
+                    resp.raise_for_status()
+
+                data = resp.json()
+                self.last_usage = data.get("usage")
+                self.last_error = None
+                return (data["choices"][0]["message"]["content"] or "").strip()
+        finally:
+            self.last_latency_ms = (time.monotonic() - start) * 1000.0
 
 
 class FakeLLM:
