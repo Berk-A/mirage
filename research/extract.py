@@ -219,17 +219,34 @@ def _colleagues_in(low_text: str, seed: Seed) -> list[str]:
     return found
 
 
-def _find_role(text: str, seed: Seed) -> Optional[str]:
+def _find_role(text: str, seed: Seed, *, max_gap: int = 45) -> Optional[str]:
+    """Return the role term NEAREST a mention of the target, within `max_gap` chars.
+
+    Nearest-wins (not first-senior-wins) so that when two people are listed back-to-back
+    — e.g. "Robert Seilbeck · CTO  Tom Müller · CEO" — the target gets their own title,
+    not the neighbour's. Ties break toward the longer (more specific) term.
+    """
     low = text.lower()
+    names = [seed.name.lower()] + [a.lower() for a in seed.aliases]
     last = seed.name.split()[-1].lower() if seed.name else ""
+    if last:
+        names.append(last)
+    name_spans = []
+    for n in names:
+        if len(n) < 3:
+            continue
+        name_spans.extend(m.start() for m in re.finditer(rf"\b{re.escape(n)}\b", low))
+    if not name_spans:
+        return None
+
+    best_term: Optional[str] = None
+    best_gap = max_gap + 1
     for term in ROLE_TERMS:
         for m in re.finditer(re.escape(term), low):
-            if not last:
-                return _titlecase_role(term)
-            window = low[max(0, m.start() - 80): m.end() + 80]
-            if last in window or seed.name.lower() in window:
-                return _titlecase_role(term)
-    return None
+            gap = min(abs(m.start() - p) for p in name_spans)
+            if gap < best_gap or (gap == best_gap and best_term and len(term) > len(best_term)):
+                best_gap, best_term = gap, term
+    return _titlecase_role(best_term) if best_term and best_gap <= max_gap else None
 
 
 def _titlecase_role(term: str) -> str:

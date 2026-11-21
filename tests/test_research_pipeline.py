@@ -419,6 +419,69 @@ def test_dossier_is_partial_but_valid_when_all_sources_unreachable():
     assert provider.verify("anything at all", target_id="julius") is None
 
 
+# --------------------------------------------------------------------------- #
+# Bright Data Web Unlocker collector (blocked tier) — scrape faked
+# --------------------------------------------------------------------------- #
+def _no_wait_rl():
+    return RateLimiter(min_interval=0.0, clock=lambda: 0.0, sleeper=lambda s: None)
+
+
+def test_brightdata_collector_returns_rawdoc_from_unlocked_html():
+    from research.collectors.brightdata import BrightDataCollector
+
+    html = "<html><head><title>Key people</title></head><body>Robert Seilbeck CTO</body></html>"
+    scrape = lambda url: (200, html)
+    coll = BrightDataCollector(scrape, rate_limiter=_no_wait_rl())
+    docs = coll.collect(_seed(unlock_urls=("https://seedtable.com/x",)))
+    assert len(docs) == 1
+    assert docs[0].title == "Key people"
+    assert "Robert Seilbeck" in docs[0].text
+    assert docs[0].meta.get("via") == "brightdata_unlocker"
+
+
+def test_brightdata_collector_is_graceful_on_failure():
+    from research.collectors.brightdata import BrightDataCollector
+
+    rl = _no_wait_rl()
+    # non-200 → skipped
+    assert BrightDataCollector(lambda u: (0, ""), rate_limiter=rl).collect(
+        _seed(unlock_urls=("https://x/",))) == []
+
+    # exception in the backend → no crash, empty
+    def boom(url):
+        raise RuntimeError("unlocker down")
+
+    assert BrightDataCollector(boom, rate_limiter=rl).collect(
+        _seed(unlock_urls=("https://x/",))) == []
+
+
+def test_find_role_picks_nearest_title_when_people_listed_together():
+    # The seedtable "Key people" shape: two founders back-to-back. Robert must get CTO,
+    # not Tom's "Founder & CEO".
+    html = ("<html><head><title>Key people</title></head><body>"
+            "Robert Seilbeck Likely hiring manager Chief Technology Officer "
+            "Tom-Christopher Müller Founder and CEO at revel8</body></html>")
+    scrape = lambda url: (200, html)
+    from research.collectors.brightdata import BrightDataCollector
+    robert = Seed(target_id="robert", name="Robert Seilbeck", role="Co-Founder & CTO",
+                  company="revel8", aliases=("Robert", "Seilbeck"),
+                  colleagues=("Tom Müller", "Julius Muth"),
+                  unlock_urls=("https://seedtable.com/x",))
+    docs = BrightDataCollector(scrape, rate_limiter=_no_wait_rl()).collect(robert)
+    facts = extract(docs[0], robert)
+    roles = {f.object_value for f in facts if f.predicate == "role_is"}
+    assert "Chief Technology Officer" in roles
+    assert "Founder" not in roles and "Ceo" not in roles  # the neighbour's title
+
+
+def test_default_provider_without_brightdata_builds():
+    from research.seeds import default_provider
+
+    provider = default_provider(as_of="2026-11-21", use_brightdata=False)
+    from core.interfaces import DossierProvider as _DP
+    assert isinstance(provider, _DP)
+
+
 def test_build_dossier_is_deterministic():
     url = "https://tech.eu/revel8"
 

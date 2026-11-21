@@ -26,6 +26,14 @@ _COMPANY_URLS: tuple[str, ...] = (
     "https://www.whu.edu/de/news-insights/whu-magazin/artikel/why-stories-matter-revel8-cybersecurity-community/",
 )
 
+# Blocked-tier pages (JS-rendered / bot-blocked) reachable only via the Bright Data Web
+# Unlocker. The seedtable company page carries a structured "Key people" section (roles
+# of the founders) that a plain fetch can't see; revel8.ai is the JS-rendered homepage.
+_COMPANY_UNLOCK_URLS: tuple[str, ...] = (
+    "https://seedtable.com/jobs/180057",
+    "https://www.revel8.ai/",
+)
+
 PRACTICE_SEEDS: tuple[Seed, ...] = (
     Seed(
         target_id="julius",
@@ -35,6 +43,7 @@ PRACTICE_SEEDS: tuple[Seed, ...] = (
         aliases=("Julius", "Muth"),
         urls=_COMPANY_URLS,
         colleagues=("Tom Müller", "Robert Seilbeck"),
+        unlock_urls=_COMPANY_UNLOCK_URLS,
         # github/feeds: none confirmed yet — URL discovery is the recommended next step.
     ),
     Seed(
@@ -45,6 +54,7 @@ PRACTICE_SEEDS: tuple[Seed, ...] = (
         aliases=("Tom", "Müller", "Mueller"),
         urls=_COMPANY_URLS,
         colleagues=("Julius Muth", "Robert Seilbeck"),
+        unlock_urls=_COMPANY_UNLOCK_URLS,
     ),
     Seed(
         target_id="robert",
@@ -54,17 +64,33 @@ PRACTICE_SEEDS: tuple[Seed, ...] = (
         aliases=("Robert", "Seilbeck"),
         urls=_COMPANY_URLS,
         colleagues=("Julius Muth", "Tom Müller"),
+        unlock_urls=_COMPANY_UNLOCK_URLS,
     ),
 )
 
 SEEDS_BY_ID = {s.target_id: s for s in PRACTICE_SEEDS}
 
 
-def default_provider(as_of: str | None = None):
-    """A `GraphResearchProvider` over the practice seeds with the open-tier collectors.
-    Imported lazily so `research.seeds` stays cheap to import."""
-    from research.collectors import FeedCollector, GitHubCollector, WebCollector
+def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = None):
+    """A `GraphResearchProvider` over the practice seeds.
+
+    Open-tier collectors always run. The Bright Data Web Unlocker collector is added when
+    a backend is usable (`bdata login` done, or BRIGHTDATA_API_KEY set) — pass
+    `use_brightdata=False` to force the open-tier-only pipeline, `True` to require it.
+    Imported lazily so `research.seeds` stays cheap to import.
+    """
+    from research.collectors import (
+        BrightDataCollector,
+        FeedCollector,
+        GitHubCollector,
+        WebCollector,
+        brightdata_available,
+    )
     from research.pipeline import GraphResearchProvider
 
     collectors = [WebCollector(), GitHubCollector(), FeedCollector()]
+    if use_brightdata is None:
+        use_brightdata = brightdata_available()
+    if use_brightdata:
+        collectors.append(BrightDataCollector())
     return GraphResearchProvider(PRACTICE_SEEDS, collectors, as_of=as_of)

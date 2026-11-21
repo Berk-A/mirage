@@ -45,7 +45,9 @@ get deep.
 
 - [x] Dossier schema locked (`core.models.Dossier`/`Fact`/`Hook`/`Sender`/`Vendor`)
 - [x] OSINT collectors — open tier: web, GitHub, RSS/feeds (`research/collectors/`).
-      Blocked tier (LinkedIn/IG/X) needs a scraping-API backend — see `ASSESSMENT.md`.
+      Blocked tier: Bright Data Web Unlocker collector (`collectors/brightdata.py`) —
+      reaches JS/bot-blocked pages (seedtable, revel8.ai) via the CLI's stored login or
+      the REST API; added to the pipeline automatically when a backend is available.
 - [x] Extraction → typed triples + entity resolution/dedup (`extract.py`, `graph.py`)
 - [x] Derived views — recency→hooks, shared-project→senders, tools→vendors (`graph.py`)
 - [x] Grounding lookup — `GraphResearchProvider.verify` / `KnowledgeGraph.ground`
@@ -59,7 +61,7 @@ adequate option for each).
 ```
 research/
   sources.py      RawDoc + Collector protocol + robots/rate-limit
-  collectors/     web.py · github.py · feeds.py   (open-tier OSINT)
+  collectors/     web.py · github.py · feeds.py (open tier) · brightdata.py (blocked tier)
   extract.py      RawDoc -> provenance-stamped Fact triples (conservative)
   graph.py        KnowledgeGraph (NetworkX) + entity resolution + derived views + ground()
   pipeline.py     build_dossier() + GraphResearchProvider (DossierProvider+GroundingProvider)

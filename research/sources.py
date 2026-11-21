@@ -72,6 +72,9 @@ class Seed:
     # Publicly-known colleagues (e.g. co-founders). Co-mention on a page about the
     # target becomes a `colleague_of` edge → the most credible senders of all.
     colleagues: tuple[str, ...] = ()
+    # Public pages that a plain fetch can't reach (JS-rendered / bot-blocked), routed
+    # through the Bright Data Web Unlocker collector. Same extraction as `urls`.
+    unlock_urls: tuple[str, ...] = ()
 
 
 class RobotsCache:
