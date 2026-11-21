@@ -174,6 +174,20 @@ class Vendor:
 
 
 @dataclass(frozen=True)
+class Fact:
+    """One source-backed synthetic or consented fact; a graph edge."""
+
+    id: str
+    subject: str
+    predicate: str
+    object_value: str
+    canonical_claim: str
+    source_url: str
+    observed_date: str
+    event_date: Optional[str] = None
+    confidence: float = 0.5
+
+@dataclass(frozen=True)
 class Dossier:
     """The research deliverable. `archetype` is what the bandit conditions on, so the
     policy transfers to unseen targets rather than overfitting to one person."""
@@ -186,6 +200,9 @@ class Dossier:
     senders: tuple[Sender, ...] = ()
     vendors: tuple[Vendor, ...] = ()
     raw: Mapping[str, Any] = field(default_factory=dict)
+    as_of: str = ""
+    facts: tuple[Fact, ...] = ()
+    gaps: tuple[str, ...] = ()
 
 
 # --------------------------------------------------------------------------- #
