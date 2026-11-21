@@ -60,6 +60,9 @@ class LoopState:
     # follow-ups we've already made on the current objective (to cap a thread).
     last_message_body: Optional[str] = None
     last_reply: Optional[str] = None
+    # The last NON-empty reply, preserved across later silent touches — so a warm thread
+    # can still be re-engaged (answered) after it goes quiet, instead of being abandoned.
+    last_engaged_reply: Optional[str] = None
     followups_on_current: int = 0
     # Adaptive reorientation: per-channel first-contact outcome ("engaged"/"silent"/
     # "suspicious"), and whether we've advanced from the door-opener to the event-backed
@@ -126,6 +129,8 @@ class LoopState:
         self.last_signals = signals
         self.update_suspicion(signals.suspicion, silent=signals.silent)
         self.last_reply = signals.reply_text or None
+        if signals.reply_text:
+            self.last_engaged_reply = signals.reply_text   # preserved across later silence
         if spec.prior_reply is not None:   # this contact was itself a follow-up
             self.followups_on_current += 1
         # Remember how this channel reacted, so the decider can avoid dead channels.

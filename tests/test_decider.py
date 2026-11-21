@@ -108,11 +108,12 @@ def test_reengages_a_warm_channel_on_silence_before_rotating():
     state.contacts_used = 2
     state.ever_engaged.add("slack")                 # slack replied once...
     state.channel_outcomes["slack"] = "silent"      # ...then this follow-up went quiet
-    state.last_reply = "which event is this?"
+    state.last_reply = None                         # the silent touch cleared last_reply
+    state.last_engaged_reply = "which event is this?"   # but their earlier reply survives
     state.last_signals = Signals(events=(), replied=False)   # silence now
     m = Decider().decide(state, d).move
     assert m.channel == "slack"                     # patient re-engage, not a fresh channel
-    assert m.prior_reply == "which event is this?"  # answers their last reply
+    assert m.prior_reply == "which event is this?"  # still answers their preserved reply
     assert m.objective is Objective.DISCLOSURE
 
 

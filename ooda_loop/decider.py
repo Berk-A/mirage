@@ -177,13 +177,13 @@ class Decider:
         # over abandoning it for a cold fresh channel. Pacing makes it a next-day nudge,
         # not chasing. Only after `max_reengage` quiet nudges do we rotate away.
         warm_ch = next((ch for ch in self.channel_order if ch in state.ever_engaged), None)
-        if (warm_ch is not None and state.reengage_nudges < self.max_reengage
-                and state.last_reply):
+        prior = state.last_reply or state.last_engaged_reply   # survives a silent gap
+        if (warm_ch is not None and state.reengage_nudges < self.max_reengage and prior):
             state.reengage_nudges += 1
             return Decision.act(self._build_move(
                 Objective.DISCLOSURE, warm_ch, sender, hook, dossier,
                 engagement="warming", attempt=state.reengage_nudges, sent_at=sent_at,
-                prior_message=state.last_message_body, prior_reply=state.last_reply))
+                prior_message=state.last_message_body, prior_reply=prior))
 
         # REORIENT to a fresh interactive channel (never repeat a silent one). Only take
         # the ask cold when the budget is nearly spent (last chance), and if a channel ever
