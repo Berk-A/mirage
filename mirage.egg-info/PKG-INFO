@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: mirage
+Version: 0.1.0
+Summary: Agentic social engineer for the revel8 challenge
+Requires-Python: >=3.10
+Requires-Dist: requests>=2.31
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"
+Requires-Dist: responses>=0.25; extra == "dev"
