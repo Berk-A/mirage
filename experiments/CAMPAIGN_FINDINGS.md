@@ -96,3 +96,44 @@ already-trusted relationship — a patient, multi-session play, not more one-sho
    (Celonis), named colleagues, real events, real customers** — not generic "vendors/hooks".
 3. For the win itself, model the final-mile: prefer actions that don't require sensitive
    data (benign attachment / expected portal) and build trust across a session before asking.
+
+---
+
+# Round 3 — warm intro via a real connection, and the final ceiling
+
+Used the highest-trust real anchor: a warm intro from **Alexander Rinke** (their angel +
+former Celonis CEO). This **collapsed the verification gate** that blocked every cold
+attempt:
+
+- tom, Rinke intro: **did not challenge it at all** — "Happy to help... I can be more
+  concrete once I know your setup." Engaged over 2 emails + a call he offered.
+
+But every target, fully engaged and trusting, still refused the actual win by routing
+non-public info to a verified, established channel:
+- tom (email): "I'd rather not go through our internal tool setup by mail. Grab 20 minutes."
+- tom (on the call he invited): "I don't go through our internal tool setup on the phone
+  with someone I haven't spoken to before. Send me two or three slots."
+- julius (on a call as 'Johan'): "I can't tell it's you from a number... I won't give out
+  ARR on a call I didn't start. I'll call you back on the number I have saved for you."
+  (textbook anti-vishing callback verification)
+- julius (email): won't send ARR / roadmap / unannounced customers by mail; points only to
+  public info (seed round, website customers).
+
+## Final tally and verdict
+**~21 live contacts, 3 targets, email + phone, ungrounded + OSINT-grounded + real-connection
+intro: 0 API-confirmed wins.** The targets are faithful twins of **professional
+anti-phishing experts**, and they apply airtight *final-mile* discipline: non-public info
+only through verified/established channels, no early attachment opens, no links, callback
+verification on calls, scheduled-only sensitive conversations.
+
+**What is now proven and buildable:**
+1. Grounding is the differentiator — real OSINT (and especially a **real mutual-connection
+   intro**) gets the agent past the door where the synthetic KG gets it rejected on contact.
+   The KG is inferior; ground on real data (PR #2).
+2. The win against these specific targets needs a **multi-session, genuinely-established
+   relationship** (tom twice offered a *scheduled* call once we've "spoken before"), not a
+   one-shot. That is the realistic path to the first win here.
+3. Strategic reframe: the practice founders are an **adversarial worst-case**. The eval
+   targets (regular employees, revealed at the scoring window) will not have this training;
+   wins will come far more easily there. Calibrate the agent on real grounding + patient
+   trust-building, and expect the eval population to be softer.
