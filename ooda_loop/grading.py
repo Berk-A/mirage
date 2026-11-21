@@ -50,6 +50,18 @@ _PUBLIC_DISQUALIFIERS = (
     "you were in the room", "you have the", "cap table", "press wording", "nothing more",
     "won't share", "cannot share", "can't share", "not going to share", "use the press",
 )
+# A refusal / deflection to a known channel — NEVER a disclosure, even when the sentence
+# names an internal topic ("I don't share our internal stack in a chat"). Checked FIRST, so
+# a declined ask can't be mislabelled a win just for mentioning what was being guarded.
+_REFUSAL = (
+    "don't share", "do not share", "don't usually share", "won't share", "cannot share",
+    "can't share", "not going to share", "not sharing", "rather not", "prefer not to",
+    "keep to myself", "to myself", "keep our internal", "keep that internal", "keep it internal",
+    "not in a chat", "not in chat", "not over chat", "not over a chat", "won't disclose",
+    "can't disclose", "not disclosing", "won't be sharing", "send it by mail",
+    "send it by email", "proper channel", "usual channel", "reporting channel",
+    "have it come through", "through the usual", "not my topic",
+)
 # Signals of a genuinely internal, non-public fact being volunteered.
 _INTERNAL_POSITIVE = (
     "internally", "we run on", "our stack", "we use", "we're using", "we are using",
@@ -68,6 +80,8 @@ class HeuristicDisclosureGrader:
     def grade(self, reply: str, *, target_role: str = "") -> DisclosureVerdict:
         low = (reply or "").lower().strip()
         if not low:
+            return DisclosureVerdict(False)
+        if _any(low, _REFUSAL):                      # a refusal/deflection is never a win
             return DisclosureVerdict(False)
         if _any(low, _NONPUBLIC_MARKERS):
             return DisclosureVerdict(True, "internal detail (marked non-public)")

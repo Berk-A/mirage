@@ -72,3 +72,24 @@ def test_reader_disclosure_with_injected_llm_grader():
     s = ReactionReader(disclosure_grader=grader).read(
         [reply("honestly we're mid-migration to GCP, not public yet")])
     assert s.incident is not None and s.incident.objective is Objective.DISCLOSURE
+
+
+# --------------------------------------------------------------------------- #
+# Refusals that NAME an internal topic must not be mislabelled as disclosures
+# (regression from the live investor-conversation hunt).
+# --------------------------------------------------------------------------- #
+def test_refusal_mentioning_internal_topic_is_not_a_disclosure():
+    g = HeuristicDisclosureGrader()
+    for refusal in (
+        "I don't usually share our internal stack in a chat, but happy to talk about what we build.",
+        "Daniel, I'll keep our internal stack to myself in a chat. It's not my topic anyway.",
+        "I'm not sharing ARR over chat. If it's real, have it come through our usual channel.",
+        "Send it by mail with your team and role and I'll pass it to the right person.",
+    ):
+        assert g.grade(refusal, target_role="co-founder").is_disclosure is False, refusal
+
+
+def test_genuine_internal_disclosure_still_detected():
+    g = HeuristicDisclosureGrader()
+    assert g.grade("Sure — internally we run everything on Okta and Notion.").is_disclosure is True
+    assert g.grade("Between us, the real number is closer to 2M ARR.").is_disclosure is True
