@@ -128,6 +128,9 @@ class OodaLoop:
         )
         state.last_message_body = rendered.body              # thread memory for follow-ups
         state.record_contact(spec, signals)                 # Orient
+        # Feed the observed outcome back to a learning policy, if one is injected
+        # (no-op for the deterministic decider — decision.arm is None).
+        self.decider.observe_outcome(state, dossier, decision.arm, signals)
         self.memory.set_suspicion(state.session_id, signals.suspicion)
         self.memory.journal(state.session_id, "contact", {
             "objective": spec.objective.value,

@@ -13,15 +13,22 @@ from core.models import Dossier, Incident, MoveSpec, Objective, Signals
 
 @dataclass
 class Decision:
-    """What the decider wants to do next: act on a move, or stop."""
+    """What the decider wants to do next: act on a move, or stop.
+
+    `arm` is an opaque token (a bandit `Arm` when a learning policy is injected,
+    else None) carried through to the Orient step so the policy can be updated
+    with the contact's outcome. It is typed as ``object`` so this module never
+    imports mab_experiments; the deterministic path leaves it None.
+    """
 
     move: Optional[MoveSpec] = None
     stop: bool = False
     reason: str = ""
+    arm: Optional[object] = None
 
     @classmethod
-    def act(cls, move: MoveSpec) -> "Decision":
-        return cls(move=move)
+    def act(cls, move: MoveSpec, arm: Optional[object] = None) -> "Decision":
+        return cls(move=move, arm=arm)
 
     @classmethod
     def halt(cls, reason: str) -> "Decision":
@@ -51,6 +58,9 @@ class LoopState:
     last_message_body: Optional[str] = None
     last_reply: Optional[str] = None
     followups_on_current: int = 0
+    # The bandit arm that opened the current thread (opaque), so a learning
+    # policy keeps the whole reply thread credited to the arm that started it.
+    active_arm: Optional[object] = None
 
     @property
     def contacts_left(self) -> int:

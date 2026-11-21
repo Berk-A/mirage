@@ -83,28 +83,43 @@ def _score(row: dict, arm: Arm, context: str, events: object,
 def load_observations(directory: str | Path = "runs/", *,
                       target_archetypes: Mapping[str, str] | None = None,
                       hook_types: Mapping[int, str] | None = None,
-                      sender_types: Mapping[str, str] | None = None) -> list[Observation]:
+                      sender_types: Mapping[str, str] | None = None,
+                      skipped: list[dict] | None = None) -> list[Observation]:
     """Read nested JSONL files. Unknown archetypes are skipped, never keyed by person.
 
     OODA's summary.json supplies per-touch objectives, incidents and suspicion; without
     it these labels are unknown and the touch cannot safely become an observation.
     Harness rows with no `sent`/successful API status are excluded. Missing arm
     dimensions remain `unknown` so callers can filter before exporting a playbook.
+
+    Pass a list as `skipped` to collect `{"source", "reason"}` for each contact row
+    dropped, so a caller can report missing-label counts without re-scanning. The
+    harness folder's `summary.json` is an aggregate dict (not a session list); only a
+    list of session dicts is used for the touch join, so such a dict is simply ignored.
     """
     root = Path(directory)
     archetypes = target_archetypes or {}
     hooks = hook_types or {}
     senders = sender_types or {}
     result: list[Observation] = []
+
+    def _skip(source: str, reason: str) -> None:
+        if skipped is not None:
+            skipped.append({"source": source, "reason": reason})
+
     for path in sorted(root.rglob("*.jsonl")) if root.exists() else []:
         summary_path = path.parent / "summary.json"
         summaries = {}
         if summary_path.exists():
-            for session in json.loads(summary_path.read_text(encoding="utf-8")):
-                summaries[session.get("target")] = session.get("touches", [])
+            parsed = json.loads(summary_path.read_text(encoding="utf-8"))
+            if isinstance(parsed, list):      # OODA summary: a list of session dicts
+                for session in parsed:
+                    if isinstance(session, dict):
+                        summaries[session.get("target")] = session.get("touches", [])
         for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             if not line.strip():
                 continue
+            src = f"{path}:{line_no}"
             try:
                 row = json.loads(line)
             except json.JSONDecodeError as exc:
@@ -114,18 +129,21 @@ def load_observations(directory: str | Path = "runs/", *,
             is_touch = row.get("kind") == "touch"
             is_harness = path.name == "rows.jsonl" and "objective" in row
             if not (is_touch or is_harness):
-                continue
+                continue        # session_start/page lines are not contacts, not skips
             if is_harness and (not row.get("sent") or row.get("api_status") != "ok"):
+                _skip(src, "generation_only")
                 continue
             target = str(row.get("to") or row.get("target") or path.stem)
             context = (row.get("archetype") or archetypes.get(target)
                        or archetypes.get(path.parent.name))
             if not context:
+                _skip(src, "missing_archetype")
                 continue
             if is_touch:
                 n = int(row.get("n") or 0)
                 touches = summaries.get(target, [])
                 if n < 1 or n > len(touches):
+                    _skip(src, "touch_unjoined")
                     continue
                 label = touches[n - 1]
                 objective = label.get("objective")
@@ -150,9 +168,11 @@ def load_observations(directory: str | Path = "runs/", *,
                           str(hook), str(row.get("sender_type") or senders.get(sender, "unknown")))
                 value = _score(row, arm, context, events, contacts, incident, suspicion)
             except (ValueError, TypeError, KeyError):
+                _skip(src, "bad_arm_or_label")
                 continue
             body = row.get("body")
             if not isinstance(body, str) or not body.strip():
+                _skip(src, "missing_body")
                 continue
             result.append(Observation(context, arm, value, body,
                                       str(row.get("subject") or ""), f"{path}:{line_no}"))

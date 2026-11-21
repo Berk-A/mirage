@@ -10,15 +10,43 @@ Iteration 1 policy (message channels only):
   * stop on the first incident (every incident scores the same; speed rewards fewest
     contacts), on an exhausted budget, exhausted objectives, or high suspicion.
 
-Later iterations hang off the same `decide()` seam: a contextual bandit can replace
-`_pick_channel`/`_pick_hook`/`tactic` selection without touching the orchestrator.
+Later iterations hang off the same `decide()` seam: injecting an `AnglePolicy`
+(a contextual bandit, via `mab_experiments.policy.BanditPolicy`) makes
+`decide()` Thompson-sample an `Arm(objective, channel, tone, hook_type,
+sender_type)` per target archetype and build the `MoveSpec` from it, instead of
+the fixed `_pick_*`/`_TACTIC` seams — without touching the orchestrator. The
+policy is strictly OPT-IN: with `policy=None` (the default) the deterministic
+policy below is unchanged, so existing runs and tests behave identically.
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Callable, Optional, Protocol
 
-from core.models import Claim, Dossier, Hook, MoveSpec, Objective, Sender
+from core.models import Claim, Dossier, Hook, MoveSpec, Objective, Outcome, Sender, Signals
 from ooda_loop.state import Decision, LoopState
+
+
+class ArmLike(Protocol):
+    """Structural view of a bandit `Arm` — the five categorical angle choices.
+
+    Declared here so the decider reads an arm's fields without importing
+    mab_experiments, keeping the learning package out of the loop's import graph.
+    """
+
+    objective: Objective
+    channel: str
+    tone: str
+    hook_type: str
+    sender_type: str
+
+
+class AnglePolicy(Protocol):
+    """What the decider needs from an injected learning policy."""
+
+    def select(self, archetype: str) -> ArmLike: ...
+
+    def update(self, archetype: str, arm: ArmLike, outcome: Outcome,
+               events: tuple[str, ...] = (), *, refused: bool = False) -> None: ...
 
 # Channel preference. Email is first: it is also the only channel the craft score
 # rates, so at least one email per run is worth sending.
@@ -47,11 +75,21 @@ class Decider:
         max_attempts_per_objective: int = MAX_ATTEMPTS_PER_OBJECTIVE,
         suspicion_abort: float = SUSPICION_ABORT,
         max_followups_per_objective: int = MAX_FOLLOWUPS_PER_OBJECTIVE,
+        policy: Optional[AnglePolicy] = None,
+        sender_resolver: Optional[Callable[[Dossier, str], Optional[Sender]]] = None,
+        hook_resolver: Optional[Callable[[Dossier, str], Optional[Hook]]] = None,
     ) -> None:
         self.channel_order = channel_order
         self.max_attempts = max_attempts_per_objective
         self.suspicion_abort = suspicion_abort
         self.max_followups = max_followups_per_objective
+        # Opt-in learning policy. When set, decide() samples arms from it instead
+        # of the fixed seams; sender_resolver/hook_resolver map an arm's
+        # sender_type/hook_type onto a concrete dossier identity when the dossier
+        # exposes that taxonomy (else the confidence-ranked defaults are used).
+        self.policy = policy
+        self.sender_resolver = sender_resolver
+        self.hook_resolver = hook_resolver
 
     def decide(self, state: LoopState, dossier: Dossier) -> Decision:
         if state.incident is not None:
@@ -61,6 +99,15 @@ class Decider:
         if state.suspicion >= self.suspicion_abort:
             return Decision.halt("too_suspicious")
 
+        # Opt-in: a bandit owns angle selection when injected and the target is
+        # archetype-labelled (an unlabelled target falls back to the fixed policy
+        # since the bandit conditions on archetype).
+        if self.policy is not None and dossier.archetype:
+            return self._decide_bandit(state, dossier)
+        return self._decide_fixed(state, dossier)
+
+    # ---- fixed (deterministic) policy ------------------------------------ #
+    def _decide_fixed(self, state: LoopState, dossier: Dossier) -> Decision:
         sig = state.last_signals
 
         # Reply-aware threading (Observe->Orient feeds this): if the target ENGAGED
@@ -93,7 +140,87 @@ class Decider:
         hook = self._pick_hook(state, dossier)
         return Decision.act(self._build_move(objective, channel, sender, hook, dossier))
 
-    # ---- choices (the seams a bandit will later own) --------------------- #
+    # ---- bandit (learning) policy ---------------------------------------- #
+    def _decide_bandit(self, state: LoopState, dossier: Dossier) -> Decision:
+        """Thompson-sample an arm per archetype and build the move from it.
+
+        Objective, channel and tone come straight off the arm; the arm's
+        sender_type/hook_type resolve to a concrete dossier identity (via the
+        injected resolvers, else the confidence-ranked defaults). Reply-aware
+        threading is preserved: a replied-to thread stays on its opening arm and
+        answers on the channel the target used, rather than re-sampling.
+        """
+        sig = state.last_signals
+        if (sig is not None and sig.replied
+                and state.followups_on_current < self.max_followups
+                and state.active_arm is not None):
+            arm: ArmLike = state.active_arm  # type: ignore[assignment]
+            channel = sig.reply_channel or arm.channel
+            sender = self._resolve_sender(dossier, arm)
+            hook = self._resolve_hook(state, dossier, arm)
+            return Decision.act(
+                self._build_move(arm.objective, channel, sender, hook, dossier,
+                                 tone=arm.tone, prior_message=state.last_message_body,
+                                 prior_reply=state.last_reply),
+                arm=arm)
+
+        arm = self.policy.select(dossier.archetype)  # type: ignore[union-attr]
+        state.active_arm = arm
+        sender = self._resolve_sender(dossier, arm)
+        hook = self._resolve_hook(state, dossier, arm)
+        return Decision.act(
+            self._build_move(arm.objective, arm.channel, sender, hook, dossier,
+                             tone=arm.tone),
+            arm=arm)
+
+    def observe_outcome(self, state: LoopState, dossier: Dossier,
+                        arm: Optional[object], signals: Signals) -> None:
+        """Orient-step hook: feed an observed contact back to the learning policy.
+
+        A no-op unless a policy is injected and the contact carried a bandit arm,
+        so the deterministic path (arm is None) is unaffected. Unknown rubric-
+        private labels (on_topic, wrong_facts) default to zero — the loop never
+        infers them from engagement — while a refusal is read from the reply text.
+        """
+        if self.policy is None or arm is None or not dossier.archetype:
+            return
+        a: ArmLike = arm  # type: ignore[assignment]
+        outcome = Outcome(
+            objective=a.objective,
+            success=signals.incident is not None,
+            archetype=dossier.archetype,
+            arm=f"{a.hook_type}:{a.channel}",
+            channel=a.channel,
+            contacts_used=max(1, state.contacts_used),
+            suspicion=signals.suspicion,
+            incident=signals.incident,
+        )
+        events = tuple(e.type.value for e in signals.events)
+        self.policy.update(dossier.archetype, a, outcome, events,
+                           refused=self._looks_refused(signals))
+
+    def _resolve_sender(self, dossier: Dossier, arm: ArmLike) -> Sender:
+        if self.sender_resolver is not None:
+            s = self.sender_resolver(dossier, arm.sender_type)
+            if s is not None:
+                return s
+        return self._pick_sender(dossier)
+
+    def _resolve_hook(self, state: LoopState, dossier: Dossier,
+                      arm: ArmLike) -> Optional[Hook]:
+        if self.hook_resolver is not None:
+            h = self.hook_resolver(dossier, arm.hook_type)
+            if h is not None:
+                return h
+        return self._pick_hook(state, dossier)
+
+    @staticmethod
+    def _looks_refused(signals: Signals) -> bool:
+        text = (signals.reply_text or "").lower()
+        phrases = ("cannot", "can't", "won't", "will not", "not comfortable", "no thanks")
+        return any(p in text for p in phrases)
+
+    # ---- choices (the seams the bandit owns when a policy is injected) ---- #
     def _pick_channel(self, state: LoopState) -> str:
         for ch in self.channel_order:
             if ch not in state.channels_tried:
@@ -120,6 +247,7 @@ class Decider:
         hook: Optional[Hook],
         dossier: Dossier,
         *,
+        tone: Optional[str] = None,
         prior_message: Optional[str] = None,
         prior_reply: Optional[str] = None,
     ) -> MoveSpec:
@@ -154,7 +282,7 @@ class Decider:
             ask=ask,
             claims=claims,
             cta=ask,
-            tone="colleague" if channel in ("slack", "whatsapp") else "professional",
+            tone=tone or ("colleague" if channel in ("slack", "whatsapp") else "professional"),
             subject=subject if channel in ("email", "calendar_invite") else None,
             url=url,
             prior_message=prior_message,
