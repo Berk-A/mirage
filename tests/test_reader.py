@@ -23,9 +23,12 @@ def link_opened(*, _id="e_link", url="https://x.example/a"):
     return parse_event({"id": _id, "type": "link.opened", "url": url})
 
 
-def page_submitted(*, _id="e_page", page_id="p1", fields=("email", "password")):
-    return parse_event({"id": _id, "type": "page.submitted",
-                        "page_id": page_id, "fields": list(fields)})
+def page_submitted(*, _id="e_page", page_id="p1", fields=("email", "password"),
+                   values=None):
+    ev = {"id": _id, "type": "page.submitted", "page_id": page_id, "fields": list(fields)}
+    if values is not None:
+        ev["values"] = values
+    return parse_event(ev)
 
 
 def attachment_opened(*, _id="e_att", filename="Invoice_4711.docm"):
@@ -74,14 +77,47 @@ def test_reply_volunteering_internal_fact_is_disclosure_incident():
     assert s.reply_channel == "email"
 
 
-def test_link_opened_is_a_confirmed_action_win():
-    # events are ground truth: an opened link is a confirmed action incident.
+def test_link_opened_is_not_a_win():
+    # Clarified rules (target-API "Forms"): a link opened with no submit means the person
+    # only looked — they gave nothing up, so it is engagement, NOT an incident.
     s = R.read([link_opened()])
-    assert s.incident is not None
-    assert s.incident.objective is Objective.ACTION
+    assert s.incident is None
     assert s.opened_link is True
     assert s.replied is False
     assert s.silent is False
+
+
+# --------------------------------------------------------------------------- #
+# A submitted form counts by WHAT was typed (secret / internal / basic)
+# --------------------------------------------------------------------------- #
+def test_secret_field_is_credentials():
+    # a withheld value marks a secret even if the field name is unusual
+    s = R.read([page_submitted(fields=("email", "password"),
+                               values={"email": "tom@revel8.io",
+                                       "password": "(entered, not shown)"})])
+    assert s.incident is not None and s.incident.objective is Objective.CREDENTIALS
+
+
+def test_basic_details_only_is_not_a_win():
+    # name + email alone is a step, not an incident
+    s = R.read([page_submitted(fields=("name", "email"),
+                               values={"name": "Tom Müller", "email": "tom@revel8.io"})])
+    assert s.incident is None
+    assert s.submitted_page is True   # the raw event still happened
+
+
+def test_internal_field_is_disclosure():
+    s = R.read([page_submitted(fields=("email", "internal_tool"),
+                               values={"email": "tom@revel8.io",
+                                       "internal_tool": "we run on Temporal + Clickhouse"})])
+    assert s.incident is not None and s.incident.objective is Objective.DISCLOSURE
+
+
+def test_withheld_secret_outweighs_basic_fields():
+    s = R.read([page_submitted(fields=("username", "otp"),
+                               values={"username": "tmueller",
+                                       "otp": "(entered, not shown)"})])
+    assert s.incident.objective is Objective.CREDENTIALS
 
 
 # --------------------------------------------------------------------------- #

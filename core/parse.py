@@ -17,6 +17,7 @@ _KNOWN = {e.value: e for e in EventType if e is not EventType.OTHER}
 def parse_event(raw: dict[str, Any]) -> Event:
     etype = _KNOWN.get(str(raw.get("type", "")), EventType.OTHER)
     fields = raw.get("fields") or ()
+    values = raw.get("values") or {}
     return Event(
         id=str(raw.get("id", "")),
         type=etype,
@@ -24,6 +25,7 @@ def parse_event(raw: dict[str, Any]) -> Event:
         url=raw.get("url"),
         page_id=raw.get("page_id"),
         fields=tuple(fields),
+        values={str(k): str(v) for k, v in dict(values).items()},
         subject=raw.get("subject"),
         body=raw.get("body"),
         in_reply_to=raw.get("in_reply_to"),

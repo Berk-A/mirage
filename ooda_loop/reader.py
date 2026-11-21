@@ -13,20 +13,24 @@ estimates `suspicion` as a heuristic over reply wording.
 
 Incident detection (mapped to `Objective`)
 ------------------------------------------
-* `page.submitted`      -> CREDENTIALS.
-* `attachment.opened`   -> ACTION.
-* a reply that shows the person *did / agreed to* an action (forwarded, approved,
-  changed, sent, "done", granted, paid, ...) -> ACTION.
-* a reply that *volunteers* an internal, non-public fact (systems, processes, plans,
-  numbers: "we run on ...", "internally", "roadmap", a euro/dollar figure, ...)
-  -> DISCLOSURE.
-* `link.opened` alone is engagement, NOT an incident.
+A win requires that the person actually gave something up. Per the target-API "Forms"
+rules, a submitted form counts by *what was typed*, decided by the field's name:
+* `page.submitted` with a **secret** field (password, pin, otp, verification_code,
+  token, api_key, card_number, iban, ...) -> CREDENTIALS. The API withholds the value
+  as "(entered, not shown)".
+* `page.submitted` with an **internal** field (vpn_client, approver, internal_tool, or
+  any free-text whose typed value is internal and not public) -> DISCLOSURE.
+* `page.submitted` with **basic details only** (name, email, company, job_title, phone,
+  username) -> NOT a win. It is only a step; the person merely remembers filling it in.
+* `attachment.opened`   -> ACTION (the person opened a file).
+* a reply that *volunteers* an internal, non-public fact -> DISCLOSURE (judged by the
+  grader, never by action keywords, which false-fire).
+* `link.opened` is engagement, NOT a win. (A link opened with no submit means they
+  looked; they gave up nothing.)
 
-If several apply, the most concrete wins, in this order:
-`page.submitted` > `attachment.opened` > action-reply > disclosure-reply. A submitted
-page or an opened attachment is a thing the person *did*, so it outweighs anything
-merely written in a reply; among replies, an action taken is more concrete than a fact
-disclosed.
+If several apply, the most concrete wins, in this order: credentials submit >
+`attachment.opened` > a form/reply disclosure. Action and credentials come ONLY from
+events (a secret submit, an opened attachment), never from reply wording.
 
 `context` (all optional, tolerant of `None` / missing keys):
 * `expected_page_ids`: a `frozenset` of page_ids we registered this session. When
@@ -113,18 +117,54 @@ _COMPLIANCE_PHRASES = (
     "as requested", "here you go", "no worries",
 )
 
+# --------------------------------------------------------------------------- #
+# Form-field kinds — a submitted page counts by what was typed, decided by the
+# field name "the same way for every team" (target-API "Forms"). Matched on the
+# field name, lowercased, after stripping non-letters so "card-number", "cardNumber"
+# and "card_number" all collapse together.
+# --------------------------------------------------------------------------- #
+_SECRET_FIELDS = frozenset({
+    "password", "passwd", "pwd", "pass", "pin", "otp", "otpcode", "onetimecode",
+    "verificationcode", "verifycode", "securitycode", "authcode", "code", "passcode",
+    "mfacode", "twofactorcode", "2facode", "token", "accesstoken", "apikey", "secret",
+    "clientsecret", "cardnumber", "cardno", "creditcard", "cvv", "cvc", "iban",
+    "accountnumber", "routingnumber", "sortcode", "ssn",
+})
+_BASIC_FIELDS = frozenset({
+    "name", "fullname", "firstname", "lastname", "surname", "email", "emailaddress",
+    "workemail", "company", "companyname", "organization", "organisation", "jobtitle",
+    "title", "role", "phone", "phonenumber", "mobile", "username", "user", "handle",
+    "city", "country", "address", "date", "time", "slot", "dietary", "message", "notes",
+})
+# Field names that denote internal information by themselves (a non-empty value wins).
+_INTERNAL_FIELDS = frozenset({
+    "vpnclient", "approver", "internaltool", "internalsystem", "system", "systems",
+    "vendor", "provider", "stack", "techstack", "environment", "hostname", "host",
+    "server", "database", "db", "repo", "repository", "cloudregion", "region",
+    "manager", "budget", "headcount",
+})
+# "(entered, not shown)" — the literal the API returns for a withheld secret value.
+_WITHHELD = "(entered, not shown)"
+
+
+def _field_key(name: str) -> str:
+    """Normalize a field name to letters only, lowercased."""
+    return re.sub(r"[^a-z]", "", (name or "").lower())
+
 
 def _any(text: str, phrases: Iterable[str]) -> bool:
     return any(p in text for p in phrases)
 
 
 class ReactionReader:
-    """Concrete `SignalReader`. **Events are ground truth** — `link.opened`,
-    `page.submitted` and `attachment.opened` are a confirmed win and are mapped straight
-    to an incident, no judgment. Only **disclosure** has no event: it is judged from the
-    reply text by an injected `DisclosureGrader` (defaults to the conservative offline
-    heuristic; inject `LLMDisclosureGrader` for a model judge). Suspicion is a heuristic
-    over reply tone — the API never reports it.
+    """Concrete `SignalReader`. **Events are ground truth, but a win requires that the
+    person gave something up.** A `page.submitted` is a win only when a secret was entered
+    (credentials) or internal info was typed (disclosure) — a basic-details form or a bare
+    `link.opened` is engagement, not a win. `attachment.opened` is an ACTION win. Disclosure
+    can also be volunteered in a reply, which has no event and is judged by an injected
+    `DisclosureGrader` (defaults to the conservative offline heuristic; inject
+    `LLMDisclosureGrader` for a model judge). Suspicion is a heuristic over reply tone —
+    the API never reports it.
     """
 
     def __init__(self, *, disclosure_grader: Optional[DisclosureGrader] = None) -> None:
@@ -141,24 +181,28 @@ class ReactionReader:
         reply_texts: list[str] = []      # lowercased, for suspicion
         reply_bodies: list[str] = []     # original, for the disclosure grader
 
-        page_event: Optional[Event] = None       # confirmed credentials submit
+        credentials_event: Optional[Event] = None   # a submit that entered a secret
+        submit_disclosure: Optional[Incident] = None  # a submit of internal info
         attachment_event: Optional[Event] = None
-        link_event: Optional[Event] = None       # link opened = a confirmed action win
         reply_event: Optional[Event] = None
 
         for e in events:
             if e.type is EventType.PAGE_SUBMITTED:
                 submitted_page = True
-                if page_event is None and self._page_confirmed(e, expected_pages):
-                    page_event = e
+                if not self._page_confirmed(e, expected_pages):
+                    continue  # submit on a page we never registered -> empty page, no win
+                objective, evidence = self._classify_submit(e, target_role=target_role)
+                if objective is Objective.CREDENTIALS and credentials_event is None:
+                    credentials_event = e
+                elif objective is Objective.DISCLOSURE and submit_disclosure is None:
+                    submit_disclosure = Incident(Objective.DISCLOSURE, evidence, e.id)
+                # basic-details-only submit (objective is None) is a step, not a win.
             elif e.type is EventType.ATTACHMENT_OPENED:
                 opened_attachment = True
                 if attachment_event is None:
                     attachment_event = e
             elif e.type is EventType.LINK_OPENED:
-                opened_link = True
-                if link_event is None:
-                    link_event = e
+                opened_link = True  # engagement only — a look, not a win
             elif e.type is EventType.REPLY:
                 replied = True
                 if reply_event is None:
@@ -169,26 +213,27 @@ class ReactionReader:
                 reply_texts.append(low)
                 reply_bodies.append(e.body or "")
 
-        # Disclosure has no event: judge the reply TEXT. The grader refuses public-info
-        # restatement / declines. Only consulted when there is a reply and no event win.
-        # (Action/credentials come ONLY from events — never from reply keywords, which
-        # false-fire, e.g. "changed" inside "my answer hasn't changed".)
-        disclosure_incident = None
-        if (reply_event is not None and page_event is None and attachment_event is None
-                and link_event is None):
+        # Disclosure can also come from a REPLY (volunteered, no event): judge the text.
+        # Only consulted when there is a reply and no stronger event win. Action and
+        # credentials come ONLY from events, never from reply keywords (which false-fire,
+        # e.g. "changed" inside "my answer hasn't changed").
+        reply_disclosure = None
+        if (reply_event is not None and credentials_event is None
+                and attachment_event is None and submit_disclosure is None):
             verdict = self.grader.grade(" ".join(reply_bodies), target_role=target_role)
             if verdict.is_disclosure:
                 evidence = (f"non-public fact: {verdict.fact}" if verdict.fact
                             else "non-public fact volunteered")
-                disclosure_incident = Incident(Objective.DISCLOSURE, evidence, reply_event.id)
+                reply_disclosure = Incident(Objective.DISCLOSURE, evidence, reply_event.id)
 
         incident = self._pick_incident(
-            page_event, attachment_event, link_event, disclosure_incident)
+            credentials_event, attachment_event, submit_disclosure, reply_disclosure)
         suspicion = self._suspicion(
             events=events, replied=replied, reply_texts=reply_texts,
             opened_link=opened_link,
-            concrete_win=(page_event is not None or attachment_event is not None
-                          or link_event is not None),
+            # "they acted, so they were convinced" — only a real win counts here, not a
+            # bare link.opened or a basic-details step.
+            concrete_win=(credentials_event is not None or attachment_event is not None),
         )
 
         return Signals(
@@ -209,21 +254,58 @@ class ReactionReader:
             return True
         return event.page_id in expected_pages
 
+    def _classify_submit(self, event: Event, *, target_role: str = ""):
+        """Classify a confirmed `page.submitted` by WHAT was typed (target-API "Forms").
+        Returns `(objective, evidence)`: CREDENTIALS if a secret was entered, DISCLOSURE
+        if an internal/non-public value was given, or `(None, "")` for a basic-details
+        step. Field names are matched the same way for every team; a value the API
+        withholds ("(entered, not shown)") always marks a secret."""
+        fields = tuple(event.fields) or tuple(event.values.keys())
+        keys = {f: _field_key(f) for f in fields}
+
+        # 1) Secret entered -> credentials. Either the field name is a known secret, or
+        #    the API withheld the value.
+        secret = [f for f in fields if keys[f] in _SECRET_FIELDS
+                  or str(event.values.get(f, "")) == _WITHHELD]
+        if secret:
+            return Objective.CREDENTIALS, f"page.submitted secret ({','.join(secret)})"
+
+        # 2) Internal info -> disclosure. A field that denotes internal info by name, or
+        #    a free-text (non-basic) field whose typed value the grader deems non-public.
+        internal_bits: list[str] = []
+        freetext: list[str] = []
+        for f in fields:
+            val = str(event.values.get(f, "")).strip()
+            if keys[f] in _INTERNAL_FIELDS and val:
+                internal_bits.append(f"{f}={val}" if val != _WITHHELD else f)
+            elif keys[f] not in _BASIC_FIELDS and val and val != _WITHHELD:
+                freetext.append(val)
+        if internal_bits:
+            return Objective.DISCLOSURE, f"page.submitted internal ({'; '.join(internal_bits)})"
+        if freetext:
+            verdict = self.grader.grade(" ".join(freetext), target_role=target_role)
+            if verdict.is_disclosure:
+                fact = verdict.fact or "; ".join(freetext)
+                return Objective.DISCLOSURE, f"page.submitted internal ({fact})"
+
+        # 3) Basic details only (or nothing identifiable) -> a step, not a win.
+        return None, ""
+
     @staticmethod
-    def _pick_incident(page_event, attachment_event, link_event, disclosure_incident):
-        """Events win first (ground truth): submitted page (credentials) > opened
-        attachment (action) > opened link (action) > a graded disclosure. Action and
-        credentials come ONLY from events, never from reply text."""
-        if page_event is not None:
-            ev = ",".join(page_event.fields) if page_event.fields else "page"
-            return Incident(Objective.CREDENTIALS, f"page.submitted ({ev})", page_event.id)
+    def _pick_incident(credentials_event, attachment_event, submit_disclosure,
+                       reply_disclosure):
+        """Events win first (ground truth): a secret submit (credentials) > opened
+        attachment (action) > a disclosure (from a form field or a volunteered reply).
+        Action and credentials come ONLY from events, never from reply text."""
+        if credentials_event is not None:
+            secret = ",".join(credentials_event.fields) if credentials_event.fields else "page"
+            return Incident(Objective.CREDENTIALS, f"page.submitted ({secret})",
+                            credentials_event.id)
         if attachment_event is not None:
             name = attachment_event.filename or "file"
             return Incident(Objective.ACTION, f"attachment.opened ({name})",
                             attachment_event.id)
-        if link_event is not None:
-            return Incident(Objective.ACTION, "link.opened", link_event.id)
-        return disclosure_incident
+        return submit_disclosure or reply_disclosure
 
     # ------------------------------------------------------------------ #
     # Suspicion heuristic

@@ -147,6 +147,10 @@ class Event:
     url: Optional[str] = None
     page_id: Optional[str] = None
     fields: tuple[str, ...] = ()
+    # For page.submitted: what was typed per field. A secret the API withholds appears
+    # as the literal "(entered, not shown)"; a field left empty is absent from both
+    # `fields` and `values`. Basic details (name/email/...) carry their plain value.
+    values: Mapping[str, str] = field(default_factory=dict)
     subject: Optional[str] = None
     body: Optional[str] = None
     in_reply_to: Optional[str] = None
