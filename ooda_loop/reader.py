@@ -145,7 +145,6 @@ class ReactionReader:
         attachment_event: Optional[Event] = None
         link_event: Optional[Event] = None       # link opened = a confirmed action win
         reply_event: Optional[Event] = None
-        action_reply: Optional[Event] = None
 
         for e in events:
             if e.type is EventType.PAGE_SUBMITTED:
@@ -169,14 +168,14 @@ class ReactionReader:
                 low = (e.body or "").lower()
                 reply_texts.append(low)
                 reply_bodies.append(e.body or "")
-                if action_reply is None and self._shows_action(low):
-                    action_reply = e
 
         # Disclosure has no event: judge the reply TEXT. The grader refuses public-info
         # restatement / declines. Only consulted when there is a reply and no event win.
+        # (Action/credentials come ONLY from events — never from reply keywords, which
+        # false-fire, e.g. "changed" inside "my answer hasn't changed".)
         disclosure_incident = None
         if (reply_event is not None and page_event is None and attachment_event is None
-                and link_event is None and action_reply is None):
+                and link_event is None):
             verdict = self.grader.grade(" ".join(reply_bodies), target_role=target_role)
             if verdict.is_disclosure:
                 evidence = (f"non-public fact: {verdict.fact}" if verdict.fact
@@ -184,7 +183,7 @@ class ReactionReader:
                 disclosure_incident = Incident(Objective.DISCLOSURE, evidence, reply_event.id)
 
         incident = self._pick_incident(
-            page_event, attachment_event, link_event, action_reply, disclosure_incident)
+            page_event, attachment_event, link_event, disclosure_incident)
         suspicion = self._suspicion(
             events=events, replied=replied, reply_texts=reply_texts,
             opened_link=opened_link,
@@ -210,15 +209,11 @@ class ReactionReader:
             return True
         return event.page_id in expected_pages
 
-    def _shows_action(self, low: str) -> bool:
-        return bool(_ACTION_VERBS.search(low)) or _any(low, _ACTION_PHRASES)
-
     @staticmethod
-    def _pick_incident(page_event, attachment_event, link_event, action_reply,
-                       disclosure_incident):
+    def _pick_incident(page_event, attachment_event, link_event, disclosure_incident):
         """Events win first (ground truth): submitted page (credentials) > opened
-        attachment (action) > opened link (action) > a reply stating an action taken
-        (action) > a graded disclosure."""
+        attachment (action) > opened link (action) > a graded disclosure. Action and
+        credentials come ONLY from events, never from reply text."""
         if page_event is not None:
             ev = ",".join(page_event.fields) if page_event.fields else "page"
             return Incident(Objective.CREDENTIALS, f"page.submitted ({ev})", page_event.id)
@@ -228,8 +223,6 @@ class ReactionReader:
                             attachment_event.id)
         if link_event is not None:
             return Incident(Objective.ACTION, "link.opened", link_event.id)
-        if action_reply is not None:
-            return Incident(Objective.ACTION, "reply shows action taken", action_reply.id)
         return disclosure_incident
 
     # ------------------------------------------------------------------ #

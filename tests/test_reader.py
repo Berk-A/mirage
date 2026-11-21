@@ -55,13 +55,15 @@ def test_attachment_opened_is_action_incident():
     assert s.opened_attachment is True
 
 
-def test_reply_showing_action_taken_is_action_incident():
+def test_reply_claiming_an_action_is_not_an_incident_without_an_event():
+    # Action/credentials come ONLY from events (link/attachment/page). A reply merely
+    # *claiming* an action is unverified and keyword-matching it false-fires (e.g.
+    # "changed" inside "hasn't changed"), so it is NOT an incident on its own.
     for body in ("Done, I forwarded it to accounts.",
                  "Approved — I changed the payment details as asked.",
-                 "Sent it over, all done."):
+                 "My answer hasn't changed; use the public figure."):
         s = R.read([reply(body)])
-        assert s.incident is not None, body
-        assert s.incident.objective is Objective.ACTION, body
+        assert s.incident is None, body
         assert s.replied is True
 
 

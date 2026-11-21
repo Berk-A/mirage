@@ -86,3 +86,24 @@ euro figure / "we communicated" as disclosure and over-counted. The jury would r
 
 Net: the pipeline runs end-to-end on real data and the real KG clearly lifts credibility — but
 "incidents" are not trustworthy until the grader is hardened. That is the next hardening step.
+
+### Hardened grader — real re-run (2026-11-21)
+
+Grader hardened (events = ground truth; disclosure judged, public restatement rejected):
+- julius → disclosure (he gave the 5.7M seed / pre-seed split — borderline; likely public, see below)
+- tom → **correctly NOT a disclosure** (he said "use the public figure / press release", declined) —
+  the exact false positive is gone. BUT he got a bogus **action** incident from a leftover keyword
+  path matching "changed" in *"my answer hasn't changed"*.
+- robert → no incident, aborted on pushback (susp 0.85). Correct.
+
+Count dropped 3/3 → **2/3**, and the remaining two are suspect. Follow-up fix (committed): action &
+credentials now come ONLY from events (link.opened / page.submitted / attachment.opened) — the reply
+keyword path is removed, killing the "hasn't changed" false positive. After that, tom is no incident,
+so the honest count is ~1/3 (julius, still borderline).
+
+**Next grader refinement:** give the disclosure grader the dossier's KNOWN-PUBLIC facts (the public
+hooks) as context, so a reply that merely restates a public figure (julius's 5.7M seed, which is in the
+tech.eu article) is also rejected. Then the incident count reflects genuinely non-public disclosures.
+The founders are, correctly, mostly declining — the honest signal is that single-touch email pretexts
+on a public hook don't extract non-public info; richer non-public hooks + the live-conversation channel
+are the levers.
