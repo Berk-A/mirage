@@ -98,12 +98,47 @@ class RecordingClient:
         self._log.close()
 
 
+class _CachingProvider:
+    """Memoizes get_dossier so a (possibly slow, live-OSINT) dossier is built once per
+    target and reused as both the dossier source and the grounding source."""
+
+    def __init__(self, inner) -> None:
+        self.inner = inner
+        self._cache: dict = {}
+
+    def get_dossier(self, target_id: str, *, scenario_id: str = "practice"):
+        if target_id not in self._cache:
+            self._cache[target_id] = self.inner.get_dossier(
+                target_id, scenario_id=scenario_id)
+        return self._cache[target_id]
+
+    def verify(self, claim_text: str, *, target_id: str):
+        return self.inner.verify(claim_text, target_id=target_id)
+
+
+def _dump_dossier(d, path: str) -> None:
+    """Serialize a Dossier (the research/knowledge-graph stage) for the viewer."""
+    rec = {
+        "target_id": d.target_id, "display_name": d.display_name, "role": d.role,
+        "archetype": d.archetype,
+        "hooks": [{"topic": h.topic, "detail": h.detail, "source_url": h.source_url,
+                   "date": h.date, "confidence": h.confidence} for h in d.hooks],
+        "senders": [{"name": s.name, "address": s.address, "rationale": s.rationale}
+                    for s in d.senders],
+        "vendors": [{"name": v.name, "login_url": v.login_url} for v in d.vendors],
+    }
+    with open(path, "w") as f:
+        json.dump(rec, f, indent=2, ensure_ascii=False)
+
+
 def main(argv=None) -> int:
     load_env()
     ap = argparse.ArgumentParser(description="Multi-touch OODA live run vs the founders.")
     ap.add_argument("--targets", default="julius,tom,robert")
     ap.add_argument("--max-contacts", type=int, default=12)
     ap.add_argument("--out-dir", default=None)
+    ap.add_argument("--provider", choices=("synthetic", "real"), default="synthetic",
+                    help="real = live OSINT GraphResearchProvider; synthetic = stub")
     a = ap.parse_args(argv)
 
     if not os.environ.get("REVEL8_API_KEY"):
@@ -116,17 +151,24 @@ def main(argv=None) -> int:
     from ooda_loop.memory import ThreeTierMemory
     from ooda_loop.orchestrator import OodaLoop
     from ooda_loop.reader import ReactionReader
-    from research.synthetic_kg import SyntheticKnowledgeGraph
-
     out = a.out_dir or f"runs/ooda_{datetime.datetime.now():%Y%m%d_%H%M%S}"
     pathlib.Path(out).mkdir(parents=True, exist_ok=True)
 
-    kg = SyntheticKnowledgeGraph()          # dossier + grounding (same instance)
+    if a.provider == "real":
+        from research.seeds import default_provider
+        base_kg = default_provider()        # live OSINT -> GraphResearchProvider
+        print("provider: REAL (live OSINT via GraphResearchProvider)")
+    else:
+        from research.synthetic_kg import SyntheticKnowledgeGraph
+        base_kg = SyntheticKnowledgeGraph()
+        print("provider: synthetic stub")
+    kg = _CachingProvider(base_kg)          # dossier built once per target, reused
     renderer = StudioRenderer()             # live abliterated writer
     targets = [t.strip() for t in a.targets.split(",") if t.strip()]
     results = []
 
     for tgt in targets:
+        _dump_dossier(kg.get_dossier(tgt), f"{out}/{tgt}_dossier.json")  # research/KG stage
         rec = RecordingClient(Revel8Client(), f"{out}/{tgt}.jsonl")
         loop = OodaLoop(client=rec, reader=ReactionReader(), memory=ThreeTierMemory(),
                         dossiers=kg, renderer=renderer, decider=Decider(), grounding=kg)
