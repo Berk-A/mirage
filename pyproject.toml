@@ -7,14 +7,19 @@ name = "mirage"
 version = "0.1.0"
 description = "Agentic social engineer for the revel8 challenge"
 requires-python = ">=3.10"
-dependencies = ["requests>=2.31"]
+dependencies = [
+    "requests>=2.31",
+    "networkx>=3.2",
+    "feedparser>=6.0",
+    "beautifulsoup4>=4.12",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "responses>=0.25"]
 training = ["datasets>=3", "peft>=0.14", "trl>=0.15", "transformers>=4.46", "accelerate>=1.2", "bitsandbytes>=0.45"]
 
 [tool.setuptools]
-packages = ["core", "ooda_loop", "content", "research", "mab_experiments"]
+packages = ["core", "ooda_loop", "content", "research", "research.collectors", "mab_experiments"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

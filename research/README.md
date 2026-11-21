@@ -43,8 +43,33 @@ get deep.
 
 ## Status
 
-- [ ] Dossier schema locked
-- [ ] OSINT collectors (role, projects, talks, posts, GitHub, associates)
-- [ ] Extraction → typed triples + entity resolution/dedup
-- [ ] Derived views (recency, senders, vendors)
-- [ ] Grounding lookup
+- [x] Dossier schema locked (`core.models.Dossier`/`Fact`/`Hook`/`Sender`/`Vendor`)
+- [x] OSINT collectors — open tier: web, GitHub, RSS/feeds (`research/collectors/`).
+      Blocked tier: Bright Data Web Unlocker collector (`collectors/brightdata.py`) —
+      reaches JS/bot-blocked pages (seedtable, revel8.ai) via the CLI's stored login or
+      the REST API; added to the pipeline automatically when a backend is available.
+- [x] Extraction → typed triples + entity resolution/dedup (`extract.py`, `graph.py`)
+- [x] Derived views — recency→hooks, shared-project→senders, tools→vendors (`graph.py`)
+- [x] Grounding lookup — `GraphResearchProvider.verify` / `KnowledgeGraph.ground`
+
+See **`ASSESSMENT.md`** for the gap report + the API/infra recommendations
+(headless browser / captcha / proxies / search — needed or not, and the cheapest
+adequate option for each).
+
+## How it fits together
+
+```
+research/
+  sources.py      RawDoc + Collector protocol + robots/rate-limit
+  collectors/     web.py · github.py · feeds.py (open tier) · brightdata.py (blocked tier)
+  extract.py      RawDoc -> provenance-stamped Fact triples (conservative)
+  graph.py        KnowledgeGraph (NetworkX) + entity resolution + derived views + ground()
+  pipeline.py     build_dossier() + GraphResearchProvider (DossierProvider+GroundingProvider)
+  seeds.py        public-OSINT seeds for the practice founders
+  catalog.py      ResearchCatalog — offline serving/validation snapshot (existing)
+```
+
+`GraphResearchProvider` is a drop-in for the OODA loop's `DossierProvider` /
+`GroundingProvider`, replacing the synthetic KG stub with the same interface. Live
+collection is gated behind a network test (`RUN_LIVE_RESEARCH=1`); unit tests mock the
+network.
