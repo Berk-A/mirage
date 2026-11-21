@@ -13,7 +13,7 @@ dependencies = ["requests>=2.31"]
 dev = ["pytest>=8", "responses>=0.25"]
 
 [tool.setuptools]
-packages = ["core", "ooda_loop"]
+packages = ["core", "ooda_loop", "content"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

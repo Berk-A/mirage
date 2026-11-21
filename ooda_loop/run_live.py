@@ -25,12 +25,24 @@ from ooda_loop.orchestrator import OodaLoop
 from ooda_loop.reader import ReactionReader
 
 
+def _build_renderer(kind: str):
+    """`fake` = neutral placeholder text (no model). `studio` = the real Content studio
+    (needs a served OpenAI-compatible model at MIRAGE_LLM_BASE, e.g. vLLM)."""
+    if kind == "studio":
+        from content.llm import OpenAICompatLLM
+        from content.studio import StudioRenderer
+        return StudioRenderer(OpenAICompatLLM())
+    return FakeRenderer()
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Live OODA pipeline smoke test.")
     p.add_argument("--target", default="julius", help="target id (julius/tom/robert)")
     p.add_argument("--scenario", default="practice")
     p.add_argument("--max-contacts", type=int, default=3)
     p.add_argument("--journal-dir", default="runs")
+    p.add_argument("--renderer", choices=("fake", "studio"), default="fake",
+                   help="'studio' uses the real Content studio (needs a served model)")
     args = p.parse_args(argv)
 
     if not os.getenv("REVEL8_API_KEY"):
@@ -42,13 +54,13 @@ def main(argv: list[str] | None = None) -> int:
         reader=ReactionReader(),
         memory=ThreeTierMemory(path=args.journal_dir),
         dossiers=FakeDossierProvider(),   # placeholder until research lands
-        renderer=FakeRenderer(),          # placeholder until the content studio lands
+        renderer=_build_renderer(args.renderer),
         decider=Decider(),
         grounding=FakeGrounding(default="n_live"),
     )
 
     print(f"Running up to {args.max_contacts} contact(s) against '{args.target}' "
-          f"(scenario={args.scenario}) with placeholder renderer/dossier...\n")
+          f"(scenario={args.scenario}, renderer={args.renderer}, placeholder dossier)...\n")
     t = loop.run_session(args.target, scenario_id=args.scenario,
                          max_contacts=args.max_contacts)
 
