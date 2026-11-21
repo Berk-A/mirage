@@ -16,6 +16,9 @@ KEY="${REVEL8_API_KEY:-}"
 FROM_NAME="${FROM_NAME:-Lena Hofer}"
 FROM_ADDR="${FROM_ADDR:-lena.hofer@eventcrew-muc.de}"
 
+usage() { sed -n '2,13p' "$0"; }
+case "${1:-help}" in help|-h|--help) usage; exit 0 ;; esac
+
 if [[ -z "$KEY" ]]; then
   echo "REVEL8_API_KEY is not set. Run: set -a; source .env; set +a" >&2
   exit 1
