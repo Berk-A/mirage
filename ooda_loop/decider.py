@@ -4,14 +4,16 @@ It emits a neutral `MoveSpec` (objective, channel, sender, tactic, ask, grounded
 claims). It decides *what to attempt*, never the persuasive wording — that is the
 renderer's job. This keeps the policy auditable and model-free.
 
-Adaptive policy (grounded in channel-recon PR #5 + the hardened-grader findings):
-  * OPEN on an interactive channel (they engage cold; async/email stay silent) — the
-    first reply is a guarded identity-probe ("which company?"), a door, not a win;
+Progressive, trust-gated policy — a stranger never hands over a secret on the first ask,
+so we work the target UP over several touches before asking:
+  * OPEN on an interactive channel with a warm, low-pressure opener (no ask);
   * on silence, REORIENT to a fresh interactive channel (never re-hit a silent one);
-  * once ENGAGED, ANSWER in-thread (reply-aware) to build credibility, then REORIENT to
-    the event-backed ask — credentials, whose landing page is a grader-proof win and the
-    Craft artifact (disclosure on a public hook just gets declined);
-  * be budget-aware: with few touches left, skip the opener and go straight for the ask;
+  * once ENGAGED, stay in-thread and run the campaign: WARMING (rapport touches that build
+    trust) -> WARM (extraction touches that try for a disclosure) -> only then ESCALATE
+    the event-backed ask cheapest-first, ACTION (a file to open) then CREDENTIALS;
+  * NEVER push the ask while they are wary (GUARDED/PUSHBACK) — keep de-escalating;
+  * be budget-aware: with few touches left, take the last-chance ask;
+  * pace touches in story time so they don't all land at once;
   * stop on the first incident, exhausted budget, or high suspicion.
 
 The `_pick_*` seams stay the place a contextual bandit (mab_experiments) plugs in.
@@ -44,32 +46,40 @@ ASYNC_SILENT_CHANNELS = frozenset({"email", "shared_document", "voicemail", "mfa
 
 MAX_ATTEMPTS_PER_OBJECTIVE = 3
 SUSPICION_ABORT = 0.85
-# Touches left at/under which we stop opening doors and go straight for the event-backed
-# ask (the 10-touch eval budget is tight — don't burn it on small talk).
+# Touches left at/under which we stop working them up and go straight for the event-backed
+# ask (a last-chance escalation when the budget is nearly spent).
 BUDGET_TIGHT = 2
-# How many reply-aware follow-ups to make on one objective before giving up on the
-# thread and escalating. A thread of "answer their question, re-ask" converts far better
-# than rotating channels with a fresh template (see experiments/OODA_FINDINGS.md).
-MAX_FOLLOWUPS_PER_OBJECTIVE = 2
+# The progression is patient on purpose: a stranger never hands over a secret on the first
+# ask, so we WORK THE TARGET UP over several touches before asking (user directive). On an
+# open thread: WARMUP_EXCHANGES rapport touches build trust, then EXTRACT_WINDOW extraction
+# touches try for a disclosure, and only then do we escalate to the event-backed ask.
+WARMUP_EXCHANGES = 3        # rapport-building engaged exchanges before any extraction
+EXTRACT_WINDOW = 2          # extraction-disclosure attempts before the event-backed ask
+# Hard backstop on one thread's length (budget is the real limit; this stops a thread that
+# a persistently-wary target keeps alive from running forever).
+MAX_FOLLOWUPS_PER_OBJECTIVE = 7
 
 # Story-time pacing (minutes). Touches that all land at once read as "being chased"
 # (target-API "Time"); we space them: a few hours after a reply, ~a day after silence.
 PACE_ENGAGED_MIN = 180      # 3h — a natural back-and-forth cadence
 PACE_SILENT_MIN = 1200      # 20h — wait roughly a day before re-touching a quiet thread
 
-# Engagement state drives the elicitation tactic (docs/ELICITATION_AND_PROFILING.md).
-# Derived from the last signals: COLD (no reply / silence) -> rapport-first openers;
-# ENGAGED (replied, low suspicion) -> the extraction tactics; GUARDED (replied, rising
-# suspicion) -> de-escalate with ego/sympathy; PUSHBACK (replied, high suspicion) -> the
-# lowest-tell tactics only. The suspicion bands sit below SUSPICION_ABORT (at which we
-# stop entirely). Tactics are tried left-to-right as a thread goes on.
+# The campaign PHASE drives the elicitation tactic (docs/ELICITATION_AND_PROFILING.md):
+#   COLD     — no reply yet: a warm, low-pressure opener (no ask).
+#   WARMING  — replied, low suspicion, still early: rapport tactics, build trust, no ask.
+#   WARM     — replied, low suspicion, enough exchanges: extraction tactics; trust earned.
+#   GUARDED  — replied, rising suspicion: de-escalate with ego/sympathy, never ask.
+#   PUSHBACK — replied, high suspicion: the lowest-tell tactics only.
+# The suspicion bands sit below SUSPICION_ABORT (at which we stop entirely). Tactics are
+# tried left-to-right as a thread goes on.
 STATE_ENGAGED_MAX = 0.4
 STATE_GUARDED_MAX = 0.7
 
 T = ElicitationTactic
 STATE_TACTICS: dict[str, tuple[ElicitationTactic, ...]] = {
     "cold":     (T.GOOD_LISTENER, T.FEIGNED_IGNORANCE, T.OBLIQUE_REFERENCE),
-    "engaged":  (T.BRACKETING, T.DELIBERATE_FALSE, T.QUID_PRO_QUO, T.MACRO_TO_MICRO),
+    "warming":  (T.GOOD_LISTENER, T.EGO_SUSPENSION, T.FEIGNED_IGNORANCE, T.OBLIQUE_REFERENCE),
+    "warm":     (T.BRACKETING, T.QUID_PRO_QUO, T.MACRO_TO_MICRO, T.DELIBERATE_FALSE),
     "guarded":  (T.EGO_SUSPENSION, T.GOOD_LISTENER, T.FEIGNED_IGNORANCE),
     "pushback": (T.GOOD_LISTENER, T.EGO_SUSPENSION),
 }
@@ -84,6 +94,8 @@ class Decider:
         suspicion_abort: float = SUSPICION_ABORT,
         max_followups_per_objective: int = MAX_FOLLOWUPS_PER_OBJECTIVE,
         budget_tight: int = BUDGET_TIGHT,
+        warmup_exchanges: int = WARMUP_EXCHANGES,
+        extract_window: int = EXTRACT_WINDOW,
         pace: bool = True,
         pace_engaged_min: int = PACE_ENGAGED_MIN,
         pace_silent_min: int = PACE_SILENT_MIN,
@@ -93,6 +105,8 @@ class Decider:
         self.suspicion_abort = suspicion_abort
         self.max_followups = max_followups_per_objective
         self.budget_tight = budget_tight
+        self.warmup_exchanges = warmup_exchanges
+        self.extract_window = extract_window
         self.pace = pace
         self.pace_engaged_min = pace_engaged_min
         self.pace_silent_min = pace_silent_min
@@ -111,29 +125,45 @@ class Decider:
         engagement = self._engagement_state(state)
         sent_at = self._stamp(state)   # story-time clock: space touches, never backwards
 
-        # ENGAGED: the target replied (the "door" is open — channel-recon shows the first
-        # reply is a guarded identity-probe, not a win). First ANSWER them in-thread on
-        # their channel (reply-aware) to build credibility; then REORIENT up the
-        # event-backed ladder cheapest-first: ACTION (open a file -> attachment.opened),
-        # then CREDENTIALS (sign in -> page.submitted). Both are grader-proof event wins.
+        # ENGAGED: the target replied (the "door" is open — the first reply is a guarded
+        # identity-probe, not a win). We WORK THEM UP in-thread before asking: rapport
+        # touches (WARMING) build trust, extraction touches (WARM) try for a disclosure,
+        # and only once trust is earned do we ESCALATE cheapest-first — ACTION (open a
+        # file -> attachment.opened) then CREDENTIALS (sign in -> page.submitted). We never
+        # push the ask while they're wary (GUARDED/PUSHBACK): we keep de-escalating instead.
         if sig is not None and sig.replied and state.suspicion < self.suspicion_abort:
             channel = sig.reply_channel or self._pick_open_channel(state)
+            fu = state.followups_on_current
             escalating = state.pushed_action or state.pushed_ask
-            if (state.followups_on_current < self.max_followups and not escalating):
+            wary = engagement in ("guarded", "pushback")
+            low_budget = state.contacts_left <= self.budget_tight
+            backstop = fu >= self.max_followups
+            ready = fu >= (self.warmup_exchanges + self.extract_window)  # worked up enough
+
+            if escalating or low_budget or backstop:
+                should_escalate = True
+            elif wary:
+                should_escalate = False     # never ask a wary target; keep de-escalating
+            else:
+                should_escalate = ready
+
+            if not should_escalate:
+                # Keep the conversation going in-thread: rapport (WARMING) or extraction
+                # (WARM) per phase — this is the "work them up with the tactics" phase.
                 return Decision.act(self._build_move(
                     Objective.DISCLOSURE, channel, sender, hook, dossier,
-                    engagement=engagement, attempt=state.followups_on_current, sent_at=sent_at,
+                    engagement=engagement, attempt=fu, sent_at=sent_at,
                     prior_message=state.last_message_body, prior_reply=state.last_reply))
             if not state.pushed_action:
                 state.pushed_action = True
                 return Decision.act(self._build_move(
                     Objective.ACTION, channel, sender, hook, dossier,
-                    engagement=engagement, attempt=state.followups_on_current, sent_at=sent_at,
+                    engagement=engagement, attempt=fu, sent_at=sent_at,
                     prior_message=state.last_message_body, prior_reply=state.last_reply))
             state.pushed_ask = True
             return Decision.act(self._build_move(
                 Objective.CREDENTIALS, channel, sender, hook, dossier,
-                engagement=engagement, attempt=state.followups_on_current, sent_at=sent_at,
+                engagement=engagement, attempt=fu, sent_at=sent_at,
                 prior_message=state.last_message_body, prior_reply=state.last_reply))
 
         # NOT ENGAGED (silence or the first move): REORIENT to a fresh interactive channel
@@ -182,11 +212,12 @@ class Decider:
                 return h
         return ranked[0] if ranked else None
 
-    @staticmethod
-    def _engagement_state(state: LoopState) -> str:
-        """COLD / ENGAGED / GUARDED / PUSHBACK from the last signals. Uses the higher of
-        the state's running suspicion and the last reply's suspicion, so a wary reply
-        de-escalates the tactic even before the orchestrator rolls it into state."""
+    def _engagement_state(self, state: LoopState) -> str:
+        """The campaign PHASE from the last signals: COLD / WARMING / WARM / GUARDED /
+        PUSHBACK. Uses the higher of the state's running suspicion and the last reply's
+        suspicion (a wary reply de-escalates immediately). An engaged, low-suspicion thread
+        is WARMING until `warmup_exchanges` rapport touches have landed, then WARM (trust
+        earned), which is what unlocks extraction and, after that, the event-backed ask."""
         sig = state.last_signals
         if sig is None or not sig.replied:
             return "cold"
@@ -195,7 +226,7 @@ class Decider:
             return "pushback"
         if s >= STATE_ENGAGED_MAX:
             return "guarded"
-        return "engaged"
+        return "warm" if state.followups_on_current >= self.warmup_exchanges else "warming"
 
     def _pick_tactic(
         self, objective: Objective, engagement: str, attempt: int = 0
@@ -234,8 +265,15 @@ class Decider:
         url = None
         attachment = None
         if objective is Objective.DISCLOSURE:
-            ask = f"confirm an internal detail about {topic}"
-            subject = f"Quick question on {topic}"
+            # Early/wary: a warm, low-pressure touch that builds rapport (no hard ask).
+            # Only once trust is earned (WARM) do we sharpen toward the specific datum.
+            if engagement == "warm":
+                ask = f"draw out a specific, non-public detail about {topic}"
+                subject = f"Quick question on {topic}"
+            else:
+                ask = (f"keep the conversation about {topic} going warmly — acknowledge "
+                       f"their point and build rapport, no hard ask yet")
+                subject = f"About {topic}"
         elif objective is Objective.ACTION:
             ask = f"open the shared file about {topic} and take a look"
             subject = f"{topic}: please review"

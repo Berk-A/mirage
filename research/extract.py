@@ -58,7 +58,49 @@ TOOL_LEXICON: dict[str, tuple[str, str]] = {
     "datadog": ("Datadog", "datadoghq.com"),
     "sentry": ("Sentry", "sentry.io"),
     "vercel": ("Vercel", "vercel.com"),
+    "github": ("GitHub", "github.com"),
+    "cloudflare": ("Cloudflare", "cloudflare.com"),
+    "docker": ("Docker", "docker.com"),
+    "mongodb": ("MongoDB", "cloud.mongodb.com"),
+    "grafana": ("Grafana", "grafana.com"),
+    "stackit": ("STACKIT", "stackit.cloud"),
+    "personio": ("Personio", "personio.de"),
+    "kubernetes": ("Kubernetes", "kubernetes.io"),
+    "terraform": ("Terraform", "app.terraform.io"),
 }
+
+# Known investors/VCs → high-signal "backed by" pretexts. A named VC is a strong,
+# flattering intro topic. We also capture generic "<Name> Capital/Ventures/Partners"
+# phrases after a funding trigger, but only when they look like a firm (see _investors_in).
+INVESTOR_LEXICON = [
+    "Merantix Capital", "Project A", "Cherry Ventures", "HV Capital",
+    "Earlybird", "La Famiglia", "Speedinvest", "Point Nine", "Index Ventures",
+    "Accel", "Sequoia", "Balderton", "Lightspeed", "General Catalyst", "Y Combinator",
+    "Insight Partners", "Atomico", "Northzone", "Creandum", "Bessemer",
+]
+
+# Phrases that genuinely reveal a stack (job posts, eng pages), so a tool named right
+# after one is a real signal rather than incidental news prose.
+_STACK_TRIGGERS = (
+    "we use", "we're using", "we are using", "built with", "built on", "powered by",
+    "our stack", "tech stack", "stack:", "we work with", "we rely on", "running on",
+    "experience with", "proficient in", "familiarity with", "knowledge of",
+    "hands-on with", "deployed on", "hosted on", "runs on", "we host", "we build",
+    "infrastructure:", "we deploy",
+)
+
+# "backed by X", "raised €N from X", "led by X", "investors: X" → capture the firm.
+_INVESTOR_TRIGGER_RE = re.compile(
+    r"(?:backed by|led by|participation from|investors?(?:\s+include)?:?|"
+    r"raised[^.]{0,40}?from|funded by)\s+"
+    r"([A-Z][A-Za-z0-9&.\-]+(?:\s+[A-Z][A-Za-z0-9&.\-]+){0,3})"
+)
+_FIRM_SUFFIX_RE = re.compile(r"\b(Capital|Ventures|Partners|Fund|Group|Labs|Holdings)\b")
+# A funding amount in € / $ with a magnitude word.
+_MONEY_RE = re.compile(
+    r"(?:€|eur\s*|\$|usd\s*)\s*\d{1,4}(?:[.,]\d+)?\s*(?:million|mio|m\b|billion|bn\b)",
+    re.I,
+)
 
 PROGRAMMING_LANGS = {
     "python", "typescript", "javascript", "go", "rust", "java", "kotlin", "swift",
@@ -69,8 +111,9 @@ PROGRAMMING_LANGS = {
 _EVENT_CLASSES: list[tuple[str, tuple[str, ...]]] = [
     ("the recent funding round",
      ("raise", "raises", "raised", "million", "seed", "funding", "€", "investment", "round", "secures")),
-    ("their recent talk",
-     ("keynote", "panel", "conference", "speaks", "speaker", "talk", "fireside")),
+    ("their recent talk or interview",
+     ("keynote", "panel", "conference", "speaks", "speaker", "talk", "fireside",
+      "podcast", "interview", "episode", "webinar", "fireside", "q&a", "ama")),
     ("the recent product launch",
      ("launch", "launches", "unveils", "release", "releases", "introduc")),
     ("the company's growth",
@@ -127,15 +170,24 @@ def _extract_web(doc: RawDoc, seed: Seed) -> list[Fact]:
                                claim=f"{name} and {colleague} both work at {seed.company or 'the same company'}.",
                                confidence=0.6))
 
-    # Recent coverage → one clean, dated hook (accurate by construction).
-    if doc.published_date and (about_target or about_company):
-        topic = _headline_topic(doc.title or "", seed)
-        if topic:
-            host = _host(doc.url)
-            facts.append(_fact(seed, "engaged_with", topic, doc,
-                               claim=f'On {doc.published_date}, {name} and {seed.company or "their company"} '
-                                     f'were covered by {host}: "{(doc.title or "").strip()}".',
-                               confidence=0.5, event_date=doc.published_date))
+    # Recent coverage / talk / launch → a clean hook. A publish date makes it a dated
+    # (recency-ranked) hook; without one we still surface strong event classes, undated.
+    topic = _event_class_topic(doc.title or "") or _event_class_topic(doc.text)
+    if topic and (about_target or about_company):
+        host = _host(doc.url)
+        headline = (doc.title or "").strip()
+        when = f"On {doc.published_date}, " if doc.published_date else ""
+        facts.append(_fact(seed, "engaged_with", topic, doc,
+                           claim=f'{when}{name} and {seed.company or "their company"} '
+                                 f'were covered by {host}'
+                                 f'{": " + chr(34) + headline + chr(34) if headline else ""}.',
+                           confidence=0.5 if doc.published_date else 0.45,
+                           event_date=doc.published_date))
+
+    # Investor / funding / stack facts (snippets and first-party pages carry these).
+    if about_target or about_company:
+        facts.extend(_investor_facts(doc, seed))
+        facts.extend(_stack_facts(doc, seed))
     return facts
 
 
@@ -267,6 +319,84 @@ def _tools_in(low_text: str) -> list[tuple[str, str]]:
     for key, (display, host) in TOOL_LEXICON.items():
         if re.search(rf"\b{re.escape(key)}\b", low_text):
             found[display] = host
+    return sorted(found.items())
+
+
+def _event_class_topic(text: str) -> Optional[str]:
+    """Classify text into a known event-class hook topic, or None. Unlike
+    `_headline_topic` this never falls back to a loose capitalised phrase, so it is safe
+    to run on a snippet with no publish date without inventing a junk hook."""
+    if not text:
+        return None
+    low = text.lower()
+    for topic, keywords in _EVENT_CLASSES:
+        if any(k in low for k in keywords):
+            return topic
+    return None
+
+
+def _investors_in(text: str) -> list[str]:
+    """Named investors/VCs backing the company. Lexicon hits + "backed by <Firm>"
+    captures, kept conservative: a captured phrase must look like a firm."""
+    found: list[str] = []
+
+    def _add(name: str) -> None:
+        name = name.strip().rstrip(".,;:")
+        if not name:
+            return
+        # skip if it's a substring of, or a superset of, something already kept
+        for existing in found:
+            if name.lower() in existing.lower() or existing.lower() in name.lower():
+                return
+        found.append(name)
+
+    for inv in INVESTOR_LEXICON:
+        if re.search(rf"\b{re.escape(inv)}\b", text):
+            _add(inv)
+    for m in _INVESTOR_TRIGGER_RE.finditer(text):
+        cand = m.group(1).strip().rstrip(".,;:")
+        if _FIRM_SUFFIX_RE.search(cand) or cand in INVESTOR_LEXICON:
+            _add(cand)
+    return found[:5]
+
+
+def _investor_facts(doc: RawDoc, seed: Seed) -> list[Fact]:
+    facts: list[Fact] = []
+    company = seed.company or "the company"
+    for inv in _investors_in(doc.text):
+        facts.append(_fact(seed, "engaged_with", f"their investor {inv}", doc,
+                           claim=f"{company} is backed by {inv}.",
+                           confidence=0.55, event_date=doc.published_date))
+    m = _MONEY_RE.search(doc.text)
+    if m and re.search(r"\b(raise[ds]?|secur|nets|funding|round|invest)", doc.text.lower()):
+        amount = re.sub(r"\s+", " ", m.group(0).strip())
+        facts.append(_fact(seed, "engaged_with", "the recent funding round", doc,
+                           claim=f"{company} raised {amount}.",
+                           confidence=0.55, event_date=doc.published_date))
+    return facts
+
+
+def _stack_facts(doc: RawDoc, seed: Seed) -> list[Fact]:
+    company = seed.company or "The company"
+    facts: list[Fact] = []
+    for display, _host in _stack_tools_in(doc.text):
+        facts.append(_fact(seed, "uses_tool", display, doc,
+                           claim=f"{company} uses {display}.",
+                           confidence=0.55, event_date=doc.published_date))
+    return facts
+
+
+def _stack_tools_in(text: str) -> list[tuple[str, str]]:
+    """Tools named within a stack-revealing window (after a `_STACK_TRIGGERS` phrase).
+    Window-gated to avoid the classic false positive of a tool name in incidental prose."""
+    low = text.lower()
+    found: dict[str, str] = {}
+    for trig in _STACK_TRIGGERS:
+        for m in re.finditer(re.escape(trig), low):
+            window = low[m.end(): m.end() + 160]
+            for key, (display, host) in TOOL_LEXICON.items():
+                if re.search(rf"\b{re.escape(key)}\b", window):
+                    found[display] = host
     return sorted(found.items())
 
 

@@ -83,12 +83,19 @@ def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = 
         BrightDataCollector,
         FeedCollector,
         GitHubCollector,
+        SerpApiDiscoveryCollector,
         WebCollector,
         brightdata_available,
+        serpapi_available,
     )
     from research.pipeline import GraphResearchProvider
 
-    collectors = [WebCollector(), GitHubCollector(), FeedCollector()]
+    collectors: list = []
+    # Discovery runs FIRST: it finds the URLs the rest of the funnel can't. Gated on a
+    # SerpAPI key so offline/no-key runs fall back cleanly to the open-tier collectors.
+    if serpapi_available():
+        collectors.append(SerpApiDiscoveryCollector())
+    collectors += [WebCollector(), GitHubCollector(), FeedCollector()]
     if use_brightdata is None:
         use_brightdata = brightdata_available()
     if use_brightdata:

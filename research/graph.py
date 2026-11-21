@@ -52,7 +52,29 @@ _VENDOR_LOGIN = {
     "STACKIT": "stackit.cloud", "Salesforce": "salesforce.com", "HubSpot": "hubspot.com",
     "Stripe": "stripe.com", "Docker": "docker.com", "Datadog": "datadoghq.com",
     "Sentry": "sentry.io", "Vercel": "vercel.com", "Cloudflare": "cloudflare.com",
+    "MongoDB": "cloud.mongodb.com", "Grafana": "grafana.com", "Personio": "personio.de",
+    "Kubernetes": "kubernetes.io", "Terraform": "app.terraform.io",
 }
+
+# Lookalike sender domain. IMPORTANT: NOT the org's real domain (revel8.ai) — challenge
+# rules void a session that sends from, or lands a page on, the org's own domain. A
+# registerable cousin domain is the believable, rules-safe surface for a co-founder.
+LOOKALIKE_SENDER_DOMAIN = "revel8-team.de"
+
+_UMLAUT = str.maketrans({"ü": "ue", "ö": "oe", "ä": "ae", "ß": "ss",
+                         "Ü": "ue", "Ö": "oe", "Ä": "ae"})
+
+
+def _lookalike_email(name: str, domain: str = LOOKALIKE_SENDER_DOMAIN) -> str:
+    """first.last@<lookalike> from a display name, transliterating German umlauts so the
+    local part is a plain registerable string (Tom Müller -> tom.mueller@...)."""
+    cleaned = name.strip().translate(_UMLAUT)
+    parts = [re.sub(r"[^a-z0-9]", "", p.lower()) for p in cleaned.split()]
+    parts = [p for p in parts if p]
+    if not parts:
+        return ""
+    local = f"{parts[0]}.{parts[-1]}" if len(parts) > 1 else parts[0]
+    return f"{local}@{domain}"
 
 
 def _norm(text: str) -> str:
@@ -208,7 +230,8 @@ class KnowledgeGraph:
                     continue
                 seen.add(name.lower())
                 senders.append(
-                    Sender(name=name, address="", rationale=f.canonical_claim)
+                    Sender(name=name, address=_lookalike_email(name),
+                           rationale=f.canonical_claim)
                 )
 
         # one-hop over shared Project/Org nodes to other Person nodes
@@ -230,7 +253,7 @@ class KnowledgeGraph:
                     senders.append(
                         Sender(
                             name=name,
-                            address="",
+                            address=_lookalike_email(name),
                             rationale=f"Shares {stype.lower()} {shared_name} with the target.",
                         )
                     )

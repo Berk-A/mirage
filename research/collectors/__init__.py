@@ -9,6 +9,7 @@ added here behind the same protocol with no change to the pipeline.
 from .brightdata import BrightDataCollector, brightdata_available
 from .feeds import FeedCollector
 from .github import GitHubCollector
+from .search import SerpApiDiscoveryCollector, serpapi_available
 from .web import HttpFetcher, WebCollector
 
 __all__ = [
@@ -18,4 +19,6 @@ __all__ = [
     "HttpFetcher",
     "BrightDataCollector",
     "brightdata_available",
+    "SerpApiDiscoveryCollector",
+    "serpapi_available",
 ]

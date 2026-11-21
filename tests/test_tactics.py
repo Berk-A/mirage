@@ -47,11 +47,14 @@ def test_cold_when_no_reply():
     assert Decider()._engagement_state(st) == "cold"
 
 
-def test_engaged_guarded_pushback_bands():
+def test_phase_bands_warming_warm_guarded_pushback():
     d = Decider()
     st = _state()
     st.last_signals = _reply(0.1)
-    assert d._engagement_state(st) == "engaged"
+    assert d._engagement_state(st) == "warming"       # engaged, low susp, early
+    st.followups_on_current = 3                         # worked up past warmup
+    assert d._engagement_state(st) == "warm"           # trust earned -> extraction
+    st.followups_on_current = 0
     st.last_signals = _reply(0.5)
     assert d._engagement_state(st) == "guarded"
     st.last_signals = _reply(0.75)
@@ -79,8 +82,8 @@ def test_high_tell_tactics_are_never_auto_selected():
 
 def test_attempt_rotates_through_the_set():
     d = Decider()
-    allowed = STATE_TACTICS["engaged"]
-    seen = {d._pick_tactic(Objective.DISCLOSURE, "engaged", attempt=i)
+    allowed = STATE_TACTICS["warm"]
+    seen = {d._pick_tactic(Objective.DISCLOSURE, "warm", attempt=i)
             for i in range(len(allowed))}
     assert seen == set(allowed)                    # every tactic reachable across attempts
 
