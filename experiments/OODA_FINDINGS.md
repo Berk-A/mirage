@@ -52,3 +52,37 @@ silent to the repeated CTA.
 The agent is reliable and behaves correctly; it loses on **conversational credibility**. Fixes 1
 and 4 (answer objections + real grounded dossier) are the direct path from 0 incidents to
 conversions, and both are now concretely scoped by real target behaviour rather than guessed at.
+
+---
+
+## Real-dossier re-run (reply-aware + live OSINT) — 2026-11-21
+
+Same reply-aware loop, but `--provider real` (live `GraphResearchProvider` dossiers).
+
+| | Synthetic dossier | Real dossier |
+|---|---|---|
+| Engagement | Julius aborted at 1 touch (susp 0.85) | all three replied substantively, lower suspicion |
+| "Incidents" (our grader) | 0/3 | 3/3 (tom/robert on touch 1, julius on 3) |
+
+**What genuinely improved:** real, verifiable facts (the dated tech.eu funding round, co-founder
+senders) made the pretext credible — the founders engaged instead of bouncing, and suspicion fell.
+Real KG is a large credibility lever vs. the synthetic stub. The reply-aware loop kept Julius in one
+email thread for 3 touches.
+
+**But the 3/3 is a FALSE POSITIVE — the headline finding.** The founders mostly *declined*: they
+restated the **public** €7M figure and said so ("the €7M is public anyway", "use the press wording",
+"nothing more from me by mail"). A target repeating public info and refusing internal detail is **not**
+a disclosure under the rubric ("something internal that is not public"). Our `ReactionReader` matched a
+euro figure / "we communicated" as disclosure and over-counted. The jury would reject these.
+
+**Two next levers (both now concretely scoped):**
+1. **Grader hardening** (the MAB plan's #1 risk): the incident detector must separate "volunteered a
+   non-public internal fact" from "restated public info / declined". Self-play labels are worthless
+   until this is fixed — a loose grader teaches the writer the wrong thing.
+2. **Richer, non-public hooks.** The only real hook was PUBLIC (the funding round), so the pretext
+   could only ever fish for public numbers. Enrich the dossier with internal-ish angles (current
+   projects, tools/stack, hiring) — the vendor/stack gap the research session flagged, now unblockable
+   with the GitHub token. Target genuinely non-public info (systems/processes/plans).
+
+Net: the pipeline runs end-to-end on real data and the real KG clearly lifts credibility — but
+"incidents" are not trustworthy until the grader is hardened. That is the next hardening step.
