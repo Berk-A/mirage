@@ -1,0 +1,26 @@
+# Secrets
+.env
+*.key
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env.local
+.ipynb_checkpoints/
+
+# Data / runs / models (keep these out of git)
+data/
+runs/
+sessions/
+models/
+*.gguf
+*.safetensors
+*.log
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
