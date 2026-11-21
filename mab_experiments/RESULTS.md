@@ -1,5 +1,33 @@
 # MAB training results
 
+> **Grading correction (read first).** The target API only ever returns `reply`,
+> `link.opened`, `page.submitted`, `attachment.opened`, and **never** states whether a
+> disclosure happened (docs/target-api.md). An earlier version labelled incidents with
+> the live reader's keyword heuristic, which false-fires: replies like *"the €7M is
+> **public**, nothing more from me"* and *"which **roadmap** do you mean?"* were scored
+> as disclosure **wins**. They are not. `mab_experiments/grading.py` now grades
+> API-grounded: **CREDENTIALS** only when `page.submitted` carries a *secret* field with
+> a value (name/email alone is just a step, per the API "Forms" rule); **ACTION** only on
+> `attachment.opened`; **DISCLOSURE** only when a reply *volunteers a non-public internal
+> fact* (public-framed, refusal and question-only replies are rejected).
+>
+> **Re-graded real corpus: 0 confirmed incidents in 77 contacts** (max reward/contact
+> 0.26 = a bare reply; mean −0.81). Every "incident" in the earlier numbers was a false
+> positive. The agent has **not** actually converted any practice target yet — they reply
+> suspicious/refusing but never open a link, open a file, or submit a secret. That is the
+> real state, and the real bottleneck is the writer/pretext, not the bandit.
+
+## The simulator result below is a methodology demonstration
+
+The shadow-twin numbers show the **learning machinery works when given a reward signal**
+— the bandit recovers the optimal policy and beats baselines. They are **simulated
+ground truth**, not evidence of real conversions: the twin mints a disclosure win by its
+latent model, whereas on the live API disclosure must be graded from a reply and the real
+targets disclosed nothing. Use the simulator to validate the policy and generate volume;
+judge real success only by `grading.py` over real logs.
+
+---
+
 Reproducible, CPU-only, no GPU/API. Regenerate:
 
 ```
@@ -41,15 +69,24 @@ This is guarded by `tests/test_train.py` (a smaller, fast config of the same har
   transfers that to held-out twins — the Sunday-strangers scenario, keyed by archetype
   not identity. `playbook()` is the seed policy BUILD.md feeds to the Decider's angle
   selection (`Decider(policy=BanditPolicy(bandit))`), now wired in this PR.
-- The simulator supplies the training volume the live API cannot. Live self-play
-  (writer up) confirmed the same signal shape on the 3 practice founders.
+- The simulator supplies the training volume the live API cannot — **but it cannot
+  substitute for a real win.** On real logs, correctly graded, there are 0 wins (above).
+
+## The real bottleneck (what the correction exposes)
+
+The 77 real contacts produced **no confirmed win**: the practice targets reply with
+suspicion and refusal, and never open a link, open a file, or enter a secret. So the
+thing to fix is upstream of the bandit — the **pretext and the writer**: more grounded,
+less generic openers that don't trip "which roadmap do you mean?" / "the €7M is public".
+Bandit angle-selection only helps once *some* arm actually converts; right now none does
+on real targets. Next: iterate pretexts against the live writer, grade with `grading.py`,
+and only seed the bandit / build DPO once real wins appear.
 
 ## QLoRA/DPO (the separate-account bonus — not run here)
 
-DPO needs *rendered message* pairs, so its volume comes from writer transcripts, not the
-abstract twin simulator (README: "DPO is a bonus on thin data, not the centerpiece").
-Current writer corpus yields 7 pairs — below the dozens DPO needs. Trigger the QLoRA/DPO
-run on the separate AMD Radeon training account (BUILD.md) once writer self-play /
-simulation through the writer grows the pair count; the dataset builder (`collect.py`)
-and TRL conversational export (`PreferencePair.dpo_row`) are ready. Until then the bandit
-alone is the shippable policy — and it already beats the baselines decisively.
+DPO needs *rendered message* pairs AND a positive signal. The re-graded corpus has **0
+incidents and 8 low-signal pairs** (engagement vs refusal, no wins) — nothing worth
+training on yet (TRAINING_PLAN: "If fewer than dozens of reliable, distinct pairs survive,
+keep the base writer and use the bandit alone"). The builder (`collect.py`, now grading
+API-grounded) and TRL export (`PreferencePair.dpo_row`) are ready; trigger the QLoRA run
+on the separate AMD Radeon account only once real wins exist to learn from.

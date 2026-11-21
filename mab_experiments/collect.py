@@ -25,6 +25,7 @@ from pathlib import Path
 
 from core.models import Objective
 from mab_experiments.data import Observation, load_observations, preference_pairs
+from mab_experiments.grading import confirmed_incident
 
 
 # --- Explicit label mappings (the raw logs omit these) -------------------- #
@@ -93,13 +94,16 @@ def summarize(observations: list[Observation], pairs, skipped: list[dict]) -> di
     }
 
 
-def build(runs_dir: str | Path, out_dir: str | Path) -> dict:
+def build(runs_dir: str | Path, out_dir: str | Path, *, regrade: bool = True) -> dict:
     skipped: list[dict] = []
     observations = load_observations(
         runs_dir,
         target_archetypes=TARGET_ARCHETYPES,
         hook_types=HOOK_TYPES,
         sender_types=SENDER_TYPES,
+        # Re-grade incidents from raw reply text with the API-grounded grader, so a
+        # keyword false-positive ("the €7M is public") is not rewarded as a win.
+        grader=confirmed_incident if regrade else None,
         skipped=skipped,
     )
     pairs = preference_pairs(observations)

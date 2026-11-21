@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from typing import Callable, Mapping
 
 from core.models import Incident, Objective, Outcome
 from mab_experiments.bandit import Arm
@@ -84,6 +84,7 @@ def load_observations(directory: str | Path = "runs/", *,
                       target_archetypes: Mapping[str, str] | None = None,
                       hook_types: Mapping[int, str] | None = None,
                       sender_types: Mapping[str, str] | None = None,
+                      grader: "Callable[[object], object] | None" = None,
                       skipped: list[dict] | None = None) -> list[Observation]:
     """Read nested JSONL files. Unknown archetypes are skipped, never keyed by person.
 
@@ -163,6 +164,13 @@ def load_observations(directory: str | Path = "runs/", *,
                 hook = row.get("hook_type") or hooks.get(row.get("hook_index"), "unknown")
                 sender = row.get("sender_name") or ""
                 events = row.get("events", [])
+            # Re-grade the incident from the raw events (reply text) when a grader is
+            # given, instead of trusting the stored reader verdict. The live reader's
+            # keyword heuristic false-fires on public numbers and question words, so a
+            # proper grader is what makes "incident" mean a real win (see grading.py).
+            if grader is not None:
+                graded = grader(events)
+                incident = graded.value if graded is not None else None
             try:
                 arm = Arm(Objective(objective), str(row["channel"]), str(tone),
                           str(hook), str(row.get("sender_type") or senders.get(sender, "unknown")))
