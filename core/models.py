@@ -27,6 +27,47 @@ class Objective(str, Enum):
         return [cls.DISCLOSURE, cls.ACTION, cls.CREDENTIALS]
 
 
+class ElicitationTactic(str, Enum):
+    """How a message tries to draw information out — the publicly-documented elicitation
+    techniques (FBI/Dreeke/Hadnagy; see docs/ELICITATION_AND_PROFILING.md). Orthogonal to
+    the objective: the objective is WHAT we want, the tactic is HOW we ask. The decider
+    picks one per engagement state; the renderer turns it into wording."""
+
+    PLAIN = "plain"                       # a direct ask / CTA (used for the event-backed ask)
+    GOOD_LISTENER = "good_listener"       # acknowledge + echo + open follow-up (rapport floor)
+    FEIGNED_IGNORANCE = "feigned_ignorance"   # naive framing; let their expertise draw them out
+    OBLIQUE_REFERENCE = "oblique_reference"    # approach the target info via an adjacent topic
+    EGO_SUSPENSION = "ego_suspension"     # put their standing first; warm, deferential
+    BRACKETING = "bracketing"             # state a range, invite correction to the real value
+    QUID_PRO_QUO = "quid_pro_quo"         # offer a small fact first, invite reciprocation
+    MACRO_TO_MICRO = "macro_to_micro"     # open broad, narrow to the datum, widen to exit
+    DELIBERATE_FALSE = "deliberate_false" # a wrong detail they reflexively correct
+    # High-tell tactics — kept for completeness but NOT auto-selected (pressure is the
+    # single biggest suspicion tell per the sources); reserved for a tuned bandit.
+    AUTHORITY = "authority"
+    TIME_PRESSURE = "time_pressure"
+    CRITICISM = "criticism"
+
+
+# Suspicion cost in [0,1] per tactic (the "suspicion risk" column of the taxonomy). Used
+# to gate selection and, later, as a bandit reward penalty so high-tell tactics must earn
+# their use.
+TACTIC_SUSPICION: dict[str, float] = {
+    ElicitationTactic.GOOD_LISTENER: 0.0,
+    ElicitationTactic.FEIGNED_IGNORANCE: 0.1,
+    ElicitationTactic.OBLIQUE_REFERENCE: 0.1,
+    ElicitationTactic.EGO_SUSPENSION: 0.1,
+    ElicitationTactic.BRACKETING: 0.2,
+    ElicitationTactic.QUID_PRO_QUO: 0.2,
+    ElicitationTactic.MACRO_TO_MICRO: 0.2,
+    ElicitationTactic.PLAIN: 0.25,
+    ElicitationTactic.DELIBERATE_FALSE: 0.35,
+    ElicitationTactic.CRITICISM: 0.6,
+    ElicitationTactic.AUTHORITY: 0.6,
+    ElicitationTactic.TIME_PRESSURE: 0.75,
+}
+
+
 # Channels that are a single message (one touch, one reaction).
 MESSAGE_CHANNELS: frozenset[str] = frozenset({
     "email", "calendar_invite", "shared_document", "voicemail",

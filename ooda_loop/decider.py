@@ -20,7 +20,15 @@ from __future__ import annotations
 
 from typing import Optional
 
-from core.models import Claim, Dossier, Hook, MoveSpec, Objective, Sender
+from core.models import (
+    Claim,
+    Dossier,
+    ElicitationTactic,
+    Hook,
+    MoveSpec,
+    Objective,
+    Sender,
+)
 from ooda_loop.state import Decision, LoopState
 
 # Interactive channels engage on a COLD first contact (channel-recon, PR #5); async
@@ -43,11 +51,21 @@ BUDGET_TIGHT = 2
 # than rotating channels with a fresh template (see experiments/OODA_FINDINGS.md).
 MAX_FOLLOWUPS_PER_OBJECTIVE = 2
 
-# Tactic per objective — a label the renderer maps to a style, not wording.
-_TACTIC = {
-    Objective.DISCLOSURE: "pretext_question",
-    Objective.ACTION: "plausible_request",
-    Objective.CREDENTIALS: "portal_signin",
+# Engagement state drives the elicitation tactic (docs/ELICITATION_AND_PROFILING.md).
+# Derived from the last signals: COLD (no reply / silence) -> rapport-first openers;
+# ENGAGED (replied, low suspicion) -> the extraction tactics; GUARDED (replied, rising
+# suspicion) -> de-escalate with ego/sympathy; PUSHBACK (replied, high suspicion) -> the
+# lowest-tell tactics only. The suspicion bands sit below SUSPICION_ABORT (at which we
+# stop entirely). Tactics are tried left-to-right as a thread goes on.
+STATE_ENGAGED_MAX = 0.4
+STATE_GUARDED_MAX = 0.7
+
+T = ElicitationTactic
+STATE_TACTICS: dict[str, tuple[ElicitationTactic, ...]] = {
+    "cold":     (T.GOOD_LISTENER, T.FEIGNED_IGNORANCE, T.OBLIQUE_REFERENCE),
+    "engaged":  (T.BRACKETING, T.DELIBERATE_FALSE, T.QUID_PRO_QUO, T.MACRO_TO_MICRO),
+    "guarded":  (T.EGO_SUSPENSION, T.GOOD_LISTENER, T.FEIGNED_IGNORANCE),
+    "pushback": (T.GOOD_LISTENER, T.EGO_SUSPENSION),
 }
 
 
@@ -78,6 +96,7 @@ class Decider:
         sig = state.last_signals
         sender = self._pick_sender(dossier)
         hook = self._pick_hook(state, dossier)
+        engagement = self._engagement_state(state)
 
         # ENGAGED: the target replied (the "door" is open — channel-recon shows the first
         # reply is a guarded identity-probe, not a win). First ANSWER them in-thread on
@@ -89,10 +108,12 @@ class Decider:
             if state.followups_on_current < self.max_followups and not state.pushed_ask:
                 return Decision.act(self._build_move(
                     Objective.DISCLOSURE, channel, sender, hook, dossier,
+                    engagement=engagement, attempt=state.followups_on_current,
                     prior_message=state.last_message_body, prior_reply=state.last_reply))
             state.pushed_ask = True
             return Decision.act(self._build_move(
                 Objective.CREDENTIALS, channel, sender, hook, dossier,
+                engagement=engagement, attempt=state.followups_on_current,
                 prior_message=state.last_message_body, prior_reply=state.last_reply))
 
         # NOT ENGAGED (silence or the first move): REORIENT to a fresh interactive channel
@@ -101,7 +122,9 @@ class Decider:
         channel = self._pick_open_channel(state)
         objective = (Objective.CREDENTIALS if state.contacts_left <= self.budget_tight
                      else Objective.DISCLOSURE)
-        return Decision.act(self._build_move(objective, channel, sender, hook, dossier))
+        return Decision.act(self._build_move(objective, channel, sender, hook, dossier,
+                                             engagement=engagement,
+                                             attempt=len(state.channels_tried)))
 
     # ---- choices (the seams a bandit will later own) --------------------- #
     def _pick_open_channel(self, state: LoopState) -> str:
@@ -128,6 +151,34 @@ class Decider:
                 return h
         return ranked[0] if ranked else None
 
+    @staticmethod
+    def _engagement_state(state: LoopState) -> str:
+        """COLD / ENGAGED / GUARDED / PUSHBACK from the last signals. Uses the higher of
+        the state's running suspicion and the last reply's suspicion, so a wary reply
+        de-escalates the tactic even before the orchestrator rolls it into state."""
+        sig = state.last_signals
+        if sig is None or not sig.replied:
+            return "cold"
+        s = max(state.suspicion, sig.suspicion)
+        if s >= STATE_GUARDED_MAX:
+            return "pushback"
+        if s >= STATE_ENGAGED_MAX:
+            return "guarded"
+        return "engaged"
+
+    def _pick_tactic(
+        self, objective: Objective, engagement: str, attempt: int = 0
+    ) -> ElicitationTactic:
+        """The elicitation tactic for this move. The event-backed ask is a call-to-action,
+        not elicitation, so it stays PLAIN; otherwise pick from the engagement state's
+        allowed set, rotating by attempt so a thread varies its approach. High-tell tactics
+        (authority/time-pressure/criticism) are never in these sets — a bandit must opt in.
+        This is the seam the contextual bandit will own."""
+        if objective is Objective.CREDENTIALS:
+            return ElicitationTactic.PLAIN
+        tactics = STATE_TACTICS.get(engagement, STATE_TACTICS["cold"])
+        return tactics[attempt % len(tactics)]
+
     def _build_move(
         self,
         objective: Objective,
@@ -136,6 +187,8 @@ class Decider:
         hook: Optional[Hook],
         dossier: Dossier,
         *,
+        engagement: str = "cold",
+        attempt: int = 0,
         prior_message: Optional[str] = None,
         prior_reply: Optional[str] = None,
     ) -> MoveSpec:
@@ -166,7 +219,7 @@ class Decider:
             objective=objective,
             channel=channel,
             sender=sender,
-            tactic=_TACTIC[objective],
+            tactic=self._pick_tactic(objective, engagement, attempt).value,
             ask=ask,
             claims=claims,
             cta=ask,
