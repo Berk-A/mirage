@@ -33,7 +33,10 @@ class FeedCollector:
         return docs
 
     def _collect_feed(self, feed_url: str) -> list[RawDoc]:
-        parsed = self._fetch.parse(feed_url)
+        try:
+            parsed = self._fetch.parse(feed_url)
+        except Exception:
+            return []  # a broken feed must not sink the others
         entries = _entries(parsed)
         feed_title = _feed_title(parsed)
         docs: list[RawDoc] = []

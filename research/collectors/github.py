@@ -9,32 +9,67 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Optional
+import time
+from typing import Callable, Optional
 
 from research.sources import USER_AGENT, Collector, RawDoc, Seed, parse_http_date
 
 GITHUB_API = "https://api.github.com"
+RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 
 
 class GitHubJsonFetcher:
-    """Network seam for the GitHub API. `.get_json(url) -> (status, obj)`."""
+    """Network seam for the GitHub API: `.get_json(url) -> (status, obj)`.
 
-    def __init__(self, *, token: Optional[str] = None, timeout: float = 15.0):
+    Retries transient failures (connection errors + 429/5xx) with backoff. The single
+    request is an injectable `transport`, so retry behaviour is testable without network;
+    collectors inject a fake `.get_json` in unit tests. An optional `GITHUB_TOKEN` raises
+    the rate limit 60→5000 req/hr.
+    """
+
+    def __init__(
+        self,
+        transport: Optional[Callable[[str, dict, float], object]] = None,
+        *,
+        token: Optional[str] = None,
+        timeout: float = 15.0,
+        retries: int = 2,
+        backoff: float = 0.5,
+        sleeper: Callable[[float], None] = time.sleep,
+    ):
+        self._transport = transport or _requests_transport
         self._token = token or os.environ.get("GITHUB_TOKEN")
         self._timeout = timeout
+        self._retries = max(0, retries)
+        self._backoff = backoff
+        self._sleep = sleeper
 
     def get_json(self, url: str):
-        import requests
-
         headers = {"User-Agent": USER_AGENT, "Accept": "application/vnd.github+json"}
         if self._token:
             headers["Authorization"] = f"Bearer {self._token}"
-        resp = requests.get(url, headers=headers, timeout=self._timeout)
-        try:
-            obj = resp.json()
-        except Exception:
-            obj = None
-        return resp.status_code, obj
+        status, obj = 0, None
+        for attempt in range(self._retries + 1):
+            try:
+                resp = self._transport(url, headers, self._timeout)
+                status = int(getattr(resp, "status_code", 0))
+                try:
+                    obj = resp.json()
+                except Exception:
+                    obj = None
+                if status not in RETRY_STATUSES:
+                    return status, obj
+            except Exception:
+                status, obj = 0, None
+            if attempt < self._retries:
+                self._sleep(self._backoff * (2 ** attempt))
+        return status, obj
+
+
+def _requests_transport(url: str, headers: dict, timeout: float):
+    import requests
+
+    return requests.get(url, headers=headers, timeout=timeout)
 
 
 class GitHubCollector:

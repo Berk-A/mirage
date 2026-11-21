@@ -6,8 +6,9 @@ fake. Robots.txt and per-host rate limiting are enforced here, not by every call
 """
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 from bs4 import BeautifulSoup
 
@@ -22,6 +23,9 @@ from research.sources import (
     parse_http_date,
 )
 
+# Transient HTTP statuses worth a retry (the target API doc uses the same set).
+RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+
 
 @dataclass(frozen=True)
 class FetchResult:
@@ -33,24 +37,69 @@ class FetchResult:
 
 
 class HttpFetcher:
-    """Thin wrapper over `requests.get` returning a `FetchResult`. The one network
-    seam for the web/feed collectors; tests pass a fake with the same `.get`."""
+    """The one network seam for the web/feed collectors: `.get(url) -> FetchResult`.
 
-    def __init__(self, *, timeout: float = DEFAULT_TIMEOUT, user_agent: str = USER_AGENT):
+    Retries transient failures (connection errors + 429/5xx) with exponential backoff,
+    then gives up and returns a non-200 `FetchResult` the collector treats as "skip".
+    The actual single request is an injectable `transport`, so retry/timeout behaviour
+    is unit-testable with no network; collector tests inject a fake `.get` and never
+    reach this class at all.
+    """
+
+    def __init__(
+        self,
+        transport: Optional[Callable[[str, dict, float], object]] = None,
+        *,
+        timeout: float = DEFAULT_TIMEOUT,
+        user_agent: str = USER_AGENT,
+        retries: int = 2,
+        backoff: float = 0.5,
+        sleeper: Callable[[float], None] = time.sleep,
+    ):
+        self._transport = transport or _requests_transport
         self._timeout = timeout
         self._ua = user_agent
+        self._retries = max(0, retries)
+        self._backoff = backoff
+        self._sleep = sleeper
 
     def get(self, url: str) -> FetchResult:
-        import requests
+        headers = {"User-Agent": self._ua}
+        last: Optional[FetchResult] = None
+        for attempt in range(self._retries + 1):
+            try:
+                resp = self._transport(url, headers, self._timeout)
+                status = int(getattr(resp, "status_code", 0))
+                last = FetchResult(
+                    url=str(getattr(resp, "url", url) or url),
+                    status=status,
+                    text=getattr(resp, "text", "") if status == 200 else "",
+                    content_type=_header(resp, "Content-Type"),
+                    last_modified=_header(resp, "Last-Modified"),
+                )
+                if status not in RETRY_STATUSES:
+                    return last
+            except Exception:
+                last = FetchResult(url=url, status=0, text="")
+            if attempt < self._retries:
+                self._sleep(self._backoff * (2 ** attempt))
+        return last if last is not None else FetchResult(url=url, status=0, text="")
 
-        resp = requests.get(url, headers={"User-Agent": self._ua}, timeout=self._timeout)
-        return FetchResult(
-            url=str(resp.url),
-            status=resp.status_code,
-            text=resp.text if resp.status_code == 200 else "",
-            content_type=resp.headers.get("Content-Type", ""),
-            last_modified=resp.headers.get("Last-Modified"),
-        )
+
+def _requests_transport(url: str, headers: dict, timeout: float):
+    import requests
+
+    return requests.get(url, headers=headers, timeout=timeout)
+
+
+def _header(resp, name: str) -> str:
+    headers = getattr(resp, "headers", None)
+    if not headers:
+        return ""
+    try:
+        return headers.get(name, "") or ""
+    except Exception:
+        return ""
 
 
 def html_to_text(html: str) -> tuple[str, str]:

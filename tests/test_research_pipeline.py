@@ -324,3 +324,107 @@ def test_build_graph_survives_a_broken_collector():
 
     g = build_graph(_seed(), [Boom()])
     assert g.facts_for("julius") == []  # no crash, just empty
+
+
+# --------------------------------------------------------------------------- #
+# Fetch hardening: retries, backoff, timeouts, graceful degradation
+# --------------------------------------------------------------------------- #
+class _Resp:
+    def __init__(self, status, text="", url="", headers=None, json_obj=None):
+        self.status_code = status
+        self.text = text
+        self.url = url
+        self.headers = headers or {}
+        self._json = json_obj
+
+    def json(self):
+        if self._json is None:
+            raise ValueError("no json")
+        return self._json
+
+
+def _transport_sequence(responses):
+    calls = {"n": 0, "sleeps": []}
+
+    def transport(url, headers, timeout):
+        i = calls["n"]
+        calls["n"] += 1
+        item = responses[min(i, len(responses) - 1)]
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    return transport, calls
+
+
+def test_http_fetcher_retries_transient_then_succeeds():
+    from research.collectors.web import HttpFetcher
+
+    transport, calls = _transport_sequence([
+        _Resp(503), _Resp(503),
+        _Resp(200, text="<p>ok</p>", url="https://x/", headers={"Content-Type": "text/html"}),
+    ])
+    sleeps: list[float] = []
+    f = HttpFetcher(transport, retries=3, backoff=0.1, sleeper=sleeps.append)
+    result = f.get("https://x/")
+    assert result.status == 200 and result.text == "<p>ok</p>"
+    assert calls["n"] == 3  # two 503s then a 200
+    assert sleeps == [0.1, 0.2]  # exponential backoff between the three attempts
+
+
+def test_http_fetcher_gives_up_after_retries_without_crashing():
+    from research.collectors.web import HttpFetcher
+
+    transport, calls = _transport_sequence([_Resp(503)])
+    f = HttpFetcher(transport, retries=2, backoff=0.0, sleeper=lambda s: None)
+    result = f.get("https://x/")
+    assert result.status == 503  # returned, not raised
+    assert calls["n"] == 3  # initial + 2 retries
+
+
+def test_http_fetcher_survives_connection_error():
+    from research.collectors.web import HttpFetcher
+
+    transport, calls = _transport_sequence([ConnectionError("boom"), ConnectionError("boom")])
+    f = HttpFetcher(transport, retries=1, backoff=0.0, sleeper=lambda s: None)
+    result = f.get("https://x/")
+    assert result.status == 0 and result.text == ""  # graceful, no exception
+    assert calls["n"] == 2
+
+
+def test_github_fetcher_retries_then_returns_json():
+    from research.collectors.github import GitHubJsonFetcher
+
+    transport, calls = _transport_sequence([
+        _Resp(502), _Resp(200, json_obj={"login": "x"}),
+    ])
+    f = GitHubJsonFetcher(transport, retries=2, backoff=0.0, sleeper=lambda s: None)
+    status, obj = f.get_json("https://api.github.com/users/x")
+    assert status == 200 and obj == {"login": "x"}
+    assert calls["n"] == 2
+
+
+def test_dossier_is_partial_but_valid_when_all_sources_unreachable():
+    # Every page 404s → no facts, but a well-formed Dossier with honest gaps, and the
+    # provider still satisfies both protocols and grounds nothing.
+    url = "https://down.example/x"
+    http = FakeHttp({})  # everything 404s
+    provider = GraphResearchProvider([_seed(urls=(url,))], [_open_web(http)], as_of="2026-11-21")
+    dossier = provider.get_dossier("julius")
+    assert dossier.target_id == "julius"
+    assert dossier.display_name == "Julius Muth"
+    assert dossier.role == "Co-Founder & Co-CEO"  # from the seed, always present
+    assert dossier.facts == ()  # nothing collected
+    assert dossier.gaps  # honestly reported
+    assert provider.verify("anything at all", target_id="julius") is None
+
+
+def test_build_dossier_is_deterministic():
+    url = "https://tech.eu/revel8"
+
+    def provider():
+        http = FakeHttp({url: FetchResult(url=url, status=200, text=_web_doc_fixture(),
+                                          content_type="text/html")})
+        return build_dossier(_seed(urls=(url,)), [_open_web(http)], as_of="2026-11-21")
+
+    assert provider() == provider()  # identical Dossier from identical inputs
