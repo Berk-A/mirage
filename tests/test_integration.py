@@ -39,16 +39,24 @@ def test_real_reader_detects_disclosure_from_a_reply():
 
 
 def test_credentials_win_confirmed_against_registered_page():
-    # six silences escalate disclosure -> action -> credentials; on the credentials
-    # contact the loop registers a page (p_fake1), and the submit on that page confirms.
+    # Adaptive flow: an engaging (low-suspicion) reply opens the door; with follow-ups
+    # capped at 0 the loop reorients straight to the credentials ask, registers a landing
+    # page (p_fake1), and the submit on that page confirms the win.
+    reply = Event(id="e1", type=EventType.REPLY, channel="slack",
+                  body="Sure, happy to help — which event is this about?")
     submit = Event(id="e9", type=EventType.PAGE_SUBMITTED, page_id="p_fake1",
                    fields=("email", "password"))
-    loop, client, memory = build([[], [], [], [], [], [], [submit]])
+    client = ScriptedClient(script=[[reply], [submit]], touch_budget=10)
+    memory = ThreeTierMemory()
+    loop = OodaLoop(client=client, reader=ReactionReader(), memory=memory,
+                    dossiers=FakeDossierProvider(), renderer=FakeRenderer(),
+                    decider=Decider(max_followups_per_objective=0),
+                    grounding=FakeGrounding(default="n_1"))
     t = loop.run_session("julius")
 
     assert t.won is True
     assert t.incident.objective is Objective.CREDENTIALS
-    assert t.contacts_used == 7
+    assert t.contacts_used == 2
     assert client.pages, "a landing page should have been registered before the submit"
     assert memory.verify_chain(t.session_id) is True
 

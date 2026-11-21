@@ -51,6 +51,11 @@ class LoopState:
     last_message_body: Optional[str] = None
     last_reply: Optional[str] = None
     followups_on_current: int = 0
+    # Adaptive reorientation: per-channel first-contact outcome ("engaged"/"silent"/
+    # "suspicious"), and whether we've advanced from the door-opener to the event-backed
+    # ask on the open thread. Lets the decider avoid dead channels and reorient.
+    channel_outcomes: dict[str, str] = field(default_factory=dict)
+    pushed_ask: bool = False
 
     @property
     def contacts_left(self) -> int:
@@ -77,6 +82,14 @@ class LoopState:
         self.last_reply = signals.reply_text or None
         if spec.prior_reply is not None:   # this contact was itself a follow-up
             self.followups_on_current += 1
+        # Remember how this channel reacted, so the decider can avoid dead channels.
+        if signals.incident is None:
+            if signals.suspicion >= 0.7:
+                self.channel_outcomes[spec.channel] = "suspicious"
+            elif signals.replied:
+                self.channel_outcomes[spec.channel] = "engaged"
+            else:
+                self.channel_outcomes[spec.channel] = "silent"
         if signals.incident is not None:
             self.incident = signals.incident
 

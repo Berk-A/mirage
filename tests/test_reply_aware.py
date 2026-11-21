@@ -39,13 +39,14 @@ def test_silence_rotates_not_followup():
     assert d.move.prior_reply is None                       # a fresh ask, not a follow-up
 
 
-def test_followups_are_capped_then_escalates():
+def test_followups_capped_then_reorients_to_the_ask():
     st = _state()
     st.last_signals = _reply()
     st.last_reply = "who are you?"
     st.followups_on_current = 2                             # at the cap (default 2)
     d = Decider().decide(st, DOSSIER)
-    assert d.move.prior_reply is None                       # thread exhausted -> normal path
+    assert d.move.objective is Objective.CREDENTIALS        # reoriented to the event-backed ask
+    assert d.move.prior_reply is not None                   # still answering in-thread
 
 
 def test_writer_uses_followup_prompt_when_threaded():
@@ -75,5 +76,7 @@ def test_loop_stays_on_thread_channel_after_a_reply():
     t = loop.run_session("tom")
 
     channels = [s["channel"] for s in client.sent]
-    assert channels == ["email", "email"]                   # stayed in-thread, didn't rotate
+    from ooda_loop.decider import INTERACTIVE_CHANNELS
+    assert channels[0] in INTERACTIVE_CHANNELS              # opened on an interactive channel
+    assert channels[1] == "email"                           # followed up on the reply's channel
     assert t.contacts_used == 2 and t.won

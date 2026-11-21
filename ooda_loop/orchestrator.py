@@ -69,6 +69,7 @@ class OodaLoop:
 
         stop_reason = "completed"
         records: list[ContactRecord] = []
+        stuck = 0  # consecutive no-touch iterations (e.g. every move guard-blocked)
 
         while True:
             decision = self.decider.decide(state, dossier)       # Orient + Decide
@@ -80,6 +81,17 @@ class OodaLoop:
             record = self._act_and_observe(state, dossier, target_id, decision)
             if record is not None:
                 records.append(record)
+                stuck = 0
+            else:
+                # A guard-blocked move spends no touch; if we can never produce a valid
+                # move (e.g. a dossier whose sender is on a real-org domain), bail instead
+                # of looping forever.
+                stuck += 1
+                if stuck >= 12:
+                    stop_reason = "guard_blocked"
+                    self.memory.journal(session.session_id, "stop",
+                                        {"reason": stop_reason})
+                    break
 
         return Transcript(
             session_id=session.session_id,

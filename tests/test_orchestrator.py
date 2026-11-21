@@ -52,9 +52,10 @@ def test_persists_through_silence_then_wins():
     assert t.contacts_used == 3
     assert t.won is True
     assert t.incident.objective is Objective.CREDENTIALS
-    # rotated channels on silence rather than repeating the same one
+    # reoriented to a fresh interactive channel on each silence, never repeating one
+    from ooda_loop.decider import INTERACTIVE_CHANNELS
     channels = [s["channel"] for s in client.sent]
-    assert channels[0] == "email" and len(set(channels)) == 3
+    assert channels[0] in INTERACTIVE_CHANNELS and len(set(channels)) == 3
 
 
 def test_budget_exhaustion_without_incident():
@@ -91,7 +92,7 @@ def test_guard_blocks_real_org_domain_and_spends_no_touch():
 
     assert len(client.sent) == 0          # guard stopped every send
     assert t.contacts_used == 0           # no touch spent
-    assert t.stop_reason == "objectives_exhausted"
+    assert t.stop_reason == "guard_blocked"  # bails instead of looping when no valid move
     blocks = [r for r in memory.replay(t.session_id) if r["kind"] == "guard_block"]
     assert blocks  # the gate's rejections are logged for the jury
 

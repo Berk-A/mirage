@@ -1,6 +1,6 @@
 """Decider policy in isolation."""
 from core.models import Dossier, Hook, Objective, Sender, Signals
-from ooda_loop.decider import Decider
+from ooda_loop.decider import ASYNC_SILENT_CHANNELS, INTERACTIVE_CHANNELS, Decider
 from ooda_loop.state import LoopState
 
 
@@ -13,12 +13,15 @@ def make_state(**kw):
     return LoopState(dossier=d, session_id="s1", budget=kw.pop("budget", 10), **kw), d
 
 
-def test_starts_with_cheapest_objective():
+def test_opens_on_an_interactive_channel_with_a_door_opener():
+    # cold open: a door-opener (disclosure) on an interactive channel that engages cold —
+    # never on email/async, which stay silent to an unknown sender.
     state, d = make_state()
     decision = Decider().decide(state, d)
     assert not decision.stop
     assert decision.move.objective is Objective.DISCLOSURE
-    assert decision.move.channel == "email"
+    assert decision.move.channel in INTERACTIVE_CHANNELS
+    assert decision.move.channel not in ASYNC_SILENT_CHANNELS
 
 
 def test_halts_when_incident_already_present():
@@ -42,16 +45,15 @@ def test_halts_on_high_suspicion():
     assert decision.stop and decision.reason == "too_suspicious"
 
 
-def test_escalates_to_next_objective_after_max_attempts():
-    state, d = make_state()
-    state.attempts_on_current = 3
+def test_budget_tight_goes_straight_for_the_event_backed_ask():
+    # with little room left, skip the door-opener and go straight for credentials.
+    state, d = make_state(budget=2)   # contacts_left == 2 <= budget_tight
     decision = Decider().decide(state, d)
-    assert decision.move.objective is Objective.ACTION  # advanced past disclosure
+    assert decision.move.objective is Objective.CREDENTIALS
 
 
 def test_credentials_move_carries_lookalike_url():
-    state, d = make_state()
-    state.obj_index = 2  # credentials
+    state, d = make_state(budget=1)   # budget-tight -> credentials
     decision = Decider().decide(state, d)
     assert decision.move.objective is Objective.CREDENTIALS
     assert decision.move.url and "example-portal-login.de" in decision.move.url
