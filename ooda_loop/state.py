@@ -63,6 +63,9 @@ class LoopState:
     # The last NON-empty reply, preserved across later silent touches — so a warm thread
     # can still be re-engaged (answered) after it goes quiet, instead of being abandoned.
     last_engaged_reply: Optional[str] = None
+    # The full exchange so far, per touch: (channel, our_message, their_reply_or_"(silence)").
+    # This is the Orient record the model Director reasons over to adapt.
+    thread: list[tuple[str, str, str]] = field(default_factory=list)
     followups_on_current: int = 0
     # Adaptive reorientation: per-channel first-contact outcome ("engaged"/"silent"/
     # "suspicious"), and whether we've advanced from the door-opener to the event-backed

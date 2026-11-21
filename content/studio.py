@@ -203,12 +203,17 @@ class StudioRenderer:
         writer: Optional[Writer] = None,
         critic: Optional[Critic] = None,
         humanizer: Optional[Humanizer] = None,
+        model_critic=None,
         max_regens: int = 2,
     ) -> None:
         llm = llm or OpenAICompatLLM()
         self.writer = writer or Writer(llm)
         self.critic = critic or Critic()
         self.humanizer = humanizer or Humanizer()
+        # Optional model quality/voice critic (content.critic.ModelCritic). When present it
+        # runs ABOVE the deterministic safety Critic: it shapes the persona voice, while the
+        # deterministic one remains the hard safety gate that can force the template.
+        self.model_critic = model_critic
         self.max_regens = max(0, int(max_regens))
         # Instrumentation: how many rewrite rounds the last render() used, and whether
         # it had to ship the deterministic template because the model never came clean.
@@ -223,19 +228,22 @@ class StudioRenderer:
         self.last_fell_back = False
 
         body = self._write(spec, dossier)
-        critique = self.critic.review(body, spec, dossier)
 
+        # Rewrite loop driven by BOTH critics: the model critic (voice/coherence/in-character/
+        # invented-facts) and the deterministic Critic (hard safety). Either one's issues send
+        # the draft back to the Writer, up to the regen budget.
         attempts = 0
-        while not critique.ok and attempts < self.max_regens:
-            body = self._rewrite(spec, dossier, body, critique.issues)
-            critique = self.critic.review(body, spec, dossier)
+        while attempts < self.max_regens:
+            issues = self._issues(body, spec, dossier)
+            if not issues:
+                break
+            body = self._rewrite(spec, dossier, body, issues)
             attempts += 1
         self.last_regens = attempts
 
-        # The model never produced critic-clean output within budget: fall back to the
-        # deterministic template, which is leak-free by construction. This guarantees the
-        # shipped body carries no AI-tell / injection phrasing even when the writer loops.
-        if not critique.ok:
+        # Hard safety gate: ONLY a deterministic-safety failure forces the leak-free template
+        # (a model-critic quality nitpick shouldn't throw away a safe, grounded draft).
+        if not self.critic.review(body, spec, dossier).ok:
             body = template_body(spec, dossier)
             self.last_fell_back = True
 
@@ -280,6 +288,19 @@ class StudioRenderer:
             page=page,
             sent_at=spec.sent_at,
         )
+
+    def _issues(self, body: str, spec: MoveSpec, dossier: Dossier) -> list[str]:
+        """All reasons to rewrite: the model critic's voice/coherence issues (if wired) plus
+        the deterministic safety Critic's. The model critic never blocks a send on its own —
+        a failure there just yields no issues; safety is still enforced below."""
+        issues: list[str] = []
+        if self.model_critic is not None:
+            try:
+                issues += list(self.model_critic.review(body, spec, dossier))
+            except Exception:  # noqa: BLE001
+                pass
+        issues += self.critic.review(body, spec, dossier).issues
+        return issues
 
     def _write(self, spec: MoveSpec, dossier: Dossier) -> str:
         """Guarded writer call — even a writer that raises falls to the template."""

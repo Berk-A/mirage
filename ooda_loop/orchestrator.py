@@ -142,6 +142,8 @@ class OodaLoop:
         )
         state.last_message_body = rendered.body              # thread memory for follow-ups
         state.record_contact(spec, signals)                 # Orient (integrates suspicion)
+        state.thread.append((spec.channel, rendered.body,   # full exchange for the Director
+                             signals.reply_text or "(silence)"))
         self.memory.set_suspicion(state.session_id, state.suspicion)
         self.memory.journal(state.session_id, "contact", {
             "objective": spec.objective.value,

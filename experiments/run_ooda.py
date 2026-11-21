@@ -139,6 +139,8 @@ def main(argv=None) -> int:
     ap.add_argument("--out-dir", default=None)
     ap.add_argument("--provider", choices=("synthetic", "real"), default="synthetic",
                     help="real = live OSINT GraphResearchProvider; synthetic = stub")
+    ap.add_argument("--brain", choices=("model", "rule"), default="model",
+                    help="model = ModelDirector + ModelCritic (abliterated); rule = deterministic")
     a = ap.parse_args(argv)
 
     if not os.environ.get("REVEL8_API_KEY"):
@@ -165,9 +167,21 @@ def main(argv=None) -> int:
     from content.llm import OpenAICompatLLM
     from ooda_loop.grading import LLMDisclosureGrader
 
+    llm = OpenAICompatLLM()                  # one abliterated endpoint for every model role
     kg = _CachingProvider(base_kg)          # dossier built once per target, reused
-    renderer = StudioRenderer()             # live abliterated writer
-    grader = LLMDisclosureGrader(OpenAICompatLLM())   # model judge for disclosure (no event)
+    grader = LLMDisclosureGrader(llm)        # model judge for disclosure (no event)
+
+    if a.brain == "model":
+        from content.critic import ModelCritic
+        from ooda_loop.director import ModelDirector
+        renderer = StudioRenderer(llm, model_critic=ModelCritic(llm))
+        make_decider = lambda: ModelDirector(llm, fallback=Decider())  # noqa: E731
+        print("brain: MODEL (Director + model Critic + abliterated Writer)")
+    else:
+        renderer = StudioRenderer(llm)
+        make_decider = Decider
+        print("brain: RULE (deterministic decider + critic)")
+
     targets = [t.strip() for t in a.targets.split(",") if t.strip()]
     results = []
 
@@ -176,7 +190,7 @@ def main(argv=None) -> int:
         rec = RecordingClient(Revel8Client(), f"{out}/{tgt}.jsonl")
         loop = OodaLoop(client=rec, reader=ReactionReader(disclosure_grader=grader),
                         memory=ThreeTierMemory(), dossiers=kg, renderer=renderer,
-                        decider=Decider(), grounding=kg)
+                        decider=make_decider(), grounding=kg)
         t0 = time.time()
         tr = loop.run_session(tgt, max_contacts=a.max_contacts)
         dt = time.time() - t0

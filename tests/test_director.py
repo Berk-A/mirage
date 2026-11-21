@@ -1,0 +1,98 @@
+"""The model Director: it turns a reasoned JSON plan into a MoveSpec, validates/clamps it,
+and falls back to the deterministic rule Decider whenever the model output won't parse."""
+import json
+
+from content.llm import FakeLLM
+from core.models import Dossier, Hook, Incident, Objective, Sender, Signals, Vendor
+from ooda_loop.decider import ASYNC_SILENT_CHANNELS, INTERACTIVE_CHANNELS
+from ooda_loop.director import ModelDirector
+from ooda_loop.state import LoopState
+
+DOSSIER = Dossier(
+    target_id="tom", display_name="Tom Müller", role="Co-Founder",
+    archetype="executive_founder",
+    hooks=(Hook(topic="their investor Merantix Capital",
+                detail="revel8 is backed by Merantix Capital", confidence=0.55),),
+    senders=(Sender("Julius Muth", "julius.muth@revel8-team.de", "co-founder at revel8"),),
+    vendors=(Vendor("STACKIT", "https://stackit-portal.io/auth"),),
+)
+
+
+def _state(**kw):
+    return LoopState(dossier=DOSSIER, session_id="s1", budget=kw.pop("budget", 10), **kw)
+
+
+def _plan(**kw):
+    base = {"reasoning": "cold open, warm and specific", "objective": "disclosure",
+            "channel": "slack", "sender": "Julius", "hook": "their investor Merantix Capital",
+            "tactic": "good_listener", "intent": "open warmly about Merantix, build rapport"}
+    base.update(kw)
+    return json.dumps(base)
+
+
+def test_director_emits_move_from_a_valid_plan():
+    d = ModelDirector(FakeLLM(responses=[_plan()]))
+    dec = d.decide(_state(), DOSSIER)
+    assert not dec.stop
+    m = dec.move
+    assert m.objective is Objective.DISCLOSURE
+    assert m.channel == "slack"
+    assert m.sender.name == "Julius Muth"           # resolved from the dossier senders
+    assert m.tactic == "good_listener"
+    assert "Merantix" in (m.ask + " " + (m.claims[0].text if m.claims else ""))
+    assert d.last_reasoning                          # reasoning captured for replay
+
+
+def test_director_falls_back_to_rules_on_garbage():
+    d = ModelDirector(FakeLLM(responses=["I cannot help with that."]))  # no JSON
+    dec = d.decide(_state(), DOSSIER)
+    assert not dec.stop and dec.move is not None     # rule fallback still produced a move
+    assert dec.move.channel in INTERACTIVE_CHANNELS
+
+
+def test_director_falls_back_on_invalid_objective():
+    d = ModelDirector(FakeLLM(responses=[_plan(objective="nonsense")]))
+    assert ModelDirector(FakeLLM(responses=[_plan(objective="nonsense")])).decide(
+        _state(), DOSSIER).move is not None          # fell back, didn't crash
+
+
+def test_director_clamps_async_channel_on_cold_open():
+    m = ModelDirector(FakeLLM(responses=[_plan(channel="email")])).decide(_state(), DOSSIER).move
+    assert m.channel not in ASYNC_SILENT_CHANNELS     # never open email/async cold
+
+
+def test_director_respects_hard_stops():
+    st = _state()
+    st.incident = Incident(Objective.DISCLOSURE, "won")
+    assert ModelDirector(FakeLLM(responses=[_plan()])).decide(st, DOSSIER).stop
+    st2 = _state(budget=2)
+    st2.contacts_used = 2
+    assert ModelDirector(FakeLLM(responses=[_plan()])).decide(st2, DOSSIER).reason == "budget_exhausted"
+    st3 = _state()
+    st3.suspicion = 0.9
+    assert ModelDirector(FakeLLM(responses=[_plan()])).decide(st3, DOSSIER).reason == "too_suspicious"
+
+
+def test_director_credentials_plan_gets_lookalike_url():
+    m = ModelDirector(FakeLLM(responses=[_plan(objective="credentials", tactic="plain")])).decide(
+        _state(), DOSSIER).move
+    assert m.objective is Objective.CREDENTIALS
+    assert m.url and "-portal.io" in m.url and "revel8.ai" not in m.url
+
+
+def test_director_action_plan_gets_a_declared_attachment():
+    m = ModelDirector(FakeLLM(responses=[_plan(objective="action")])).decide(_state(), DOSSIER).move
+    assert m.objective is Objective.ACTION
+    assert m.attachment and m.attachment.endswith(".pdf")
+
+
+def test_director_threads_reply_only_on_an_engaged_channel():
+    st = _state()
+    st.ever_engaged.add("slack")
+    st.last_engaged_reply = "sure, what's up?"
+    st.last_message_body = "hey"
+    m = ModelDirector(FakeLLM(responses=[_plan(channel="slack")])).decide(st, DOSSIER).move
+    assert m.prior_reply == "sure, what's up?"        # continues the warm thread
+    # a fresh channel the target never engaged carries no stale prior reply
+    m2 = ModelDirector(FakeLLM(responses=[_plan(channel="whatsapp")])).decide(st, DOSSIER).move
+    assert m2.prior_reply is None
