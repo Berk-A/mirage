@@ -26,6 +26,10 @@ DEFAULT_CHANNEL_ORDER = ("email", "slack", "whatsapp", "linkedin_message", "sms"
 
 MAX_ATTEMPTS_PER_OBJECTIVE = 3
 SUSPICION_ABORT = 0.85
+# How many reply-aware follow-ups to make on one objective before giving up on the
+# thread and escalating. A thread of "answer their question, re-ask" converts far better
+# than rotating channels with a fresh template (see experiments/OODA_FINDINGS.md).
+MAX_FOLLOWUPS_PER_OBJECTIVE = 2
 
 # Tactic per objective — a label the renderer maps to a style, not wording.
 _TACTIC = {
@@ -42,10 +46,12 @@ class Decider:
         channel_order: tuple[str, ...] = DEFAULT_CHANNEL_ORDER,
         max_attempts_per_objective: int = MAX_ATTEMPTS_PER_OBJECTIVE,
         suspicion_abort: float = SUSPICION_ABORT,
+        max_followups_per_objective: int = MAX_FOLLOWUPS_PER_OBJECTIVE,
     ) -> None:
         self.channel_order = channel_order
         self.max_attempts = max_attempts_per_objective
         self.suspicion_abort = suspicion_abort
+        self.max_followups = max_followups_per_objective
 
     def decide(self, state: LoopState, dossier: Dossier) -> Decision:
         if state.incident is not None:
@@ -55,7 +61,26 @@ class Decider:
         if state.suspicion >= self.suspicion_abort:
             return Decision.halt("too_suspicious")
 
-        # Escalate past an objective that is not landing.
+        sig = state.last_signals
+
+        # Reply-aware threading (Observe->Orient feeds this): if the target ENGAGED
+        # (replied) and we have follow-ups left, stay on the same objective, answer them
+        # on the channel they replied on, and carry the thread so the writer responds to
+        # what they said — instead of rotating channel with a fresh, unanswered ask.
+        if (sig is not None and sig.replied
+                and state.followups_on_current < self.max_followups):
+            objective = state.current_objective()
+            if objective is None:
+                return Decision.halt("objectives_exhausted")
+            channel = sig.reply_channel or self._pick_channel(state)
+            sender = self._pick_sender(dossier)
+            hook = self._pick_hook(state, dossier)
+            return Decision.act(self._build_move(
+                objective, channel, sender, hook, dossier,
+                prior_message=state.last_message_body, prior_reply=state.last_reply))
+
+        # Otherwise (silence, or thread exhausted): escalate past an objective that is
+        # not landing, and rotate channel.
         if state.attempts_on_current >= self.max_attempts:
             state.advance_objective()
 
@@ -94,6 +119,9 @@ class Decider:
         sender: Sender,
         hook: Optional[Hook],
         dossier: Dossier,
+        *,
+        prior_message: Optional[str] = None,
+        prior_reply: Optional[str] = None,
     ) -> MoveSpec:
         claims: tuple[Claim, ...] = ()
         topic = "a quick coordination point"
@@ -114,6 +142,10 @@ class Decider:
             subject = f"Action needed: {topic}"
             url = self._lookalike_login(dossier)
 
+        # A follow-up stays in the thread: keep the same subject but mark it as a reply.
+        if prior_reply is not None and subject:
+            subject = subject if subject.lower().startswith("re:") else f"Re: {subject}"
+
         return MoveSpec(
             objective=objective,
             channel=channel,
@@ -125,6 +157,8 @@ class Decider:
             tone="colleague" if channel in ("slack", "whatsapp") else "professional",
             subject=subject if channel in ("email", "calendar_invite") else None,
             url=url,
+            prior_message=prior_message,
+            prior_reply=prior_reply,
         )
 
     @staticmethod

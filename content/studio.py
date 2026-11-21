@@ -26,7 +26,12 @@ from core.models import (
 )
 from content.llm import LLM, OpenAICompatLLM
 from content.pages import build_email_html, build_login_page
-from content.prompts import WRITER_SYSTEM, rewrite_user_prompt, writer_user_prompt
+from content.prompts import (
+    WRITER_SYSTEM,
+    followup_user_prompt,
+    rewrite_user_prompt,
+    writer_user_prompt,
+)
 from ooda_loop import guard
 
 CASUAL_CHANNELS = frozenset({
@@ -97,9 +102,12 @@ class Writer:
         self.temperature = temperature
 
     def write(self, spec: MoveSpec, dossier: Dossier) -> str:
+        # A follow-up (thread context present) answers the target; otherwise a fresh open.
+        user = (followup_user_prompt(spec, dossier) if spec.prior_reply
+                else writer_user_prompt(spec, dossier))
         msgs = [
             {"role": "system", "content": WRITER_SYSTEM},
-            {"role": "user", "content": writer_user_prompt(spec, dossier)},
+            {"role": "user", "content": user},
         ]
         body = self._complete(msgs)
         return body or self._fallback(spec, dossier)

@@ -46,6 +46,11 @@ class LoopState:
     suspicion: float = 0.0
     last_signals: Optional[Signals] = None
     incident: Optional[Incident] = None
+    # Reply-aware threading: what we last sent / they last said, and how many
+    # follow-ups we've already made on the current objective (to cap a thread).
+    last_message_body: Optional[str] = None
+    last_reply: Optional[str] = None
+    followups_on_current: int = 0
 
     @property
     def contacts_left(self) -> int:
@@ -59,6 +64,7 @@ class LoopState:
     def advance_objective(self) -> None:
         self.obj_index += 1
         self.attempts_on_current = 0
+        self.followups_on_current = 0
         self.channels_tried.clear()
 
     def record_contact(self, spec: MoveSpec, signals: Signals) -> None:
@@ -68,6 +74,9 @@ class LoopState:
         self.senders_tried.add(spec.sender.address or spec.sender.name)
         self.last_signals = signals
         self.suspicion = signals.suspicion
+        self.last_reply = signals.reply_text or None
+        if spec.prior_reply is not None:   # this contact was itself a follow-up
+            self.followups_on_current += 1
         if signals.incident is not None:
             self.incident = signals.incident
 

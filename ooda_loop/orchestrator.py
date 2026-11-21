@@ -126,6 +126,7 @@ class OodaLoop:
                 "expected_page_ids": frozenset(state.page_ids),
             },
         )
+        state.last_message_body = rendered.body              # thread memory for follow-ups
         state.record_contact(spec, signals)                 # Orient
         self.memory.set_suspicion(state.session_id, signals.suspicion)
         self.memory.journal(state.session_id, "contact", {

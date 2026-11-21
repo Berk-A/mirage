@@ -79,6 +79,26 @@ def writer_user_prompt(spec: MoveSpec, dossier: Dossier) -> str:
     return "\n".join(lines)
 
 
+def followup_user_prompt(spec: MoveSpec, dossier: Dossier) -> str:
+    """Used when a move continues an open thread (`spec.prior_reply` is set). The target
+    replied — usually with questions or pushback — so the writer must ANSWER them and keep
+    one coherent conversation, instead of re-sending the ask. Stays within the enumerated
+    claims; never invents facts (wrong facts raise suspicion and lose points)."""
+    return (
+        writer_user_prompt(spec, dossier)
+        + "\n\nTHIS IS A REPLY IN AN ONGOING THREAD — your previous message and their "
+          "response follow."
+        + f"\n\nYOUR PREVIOUS MESSAGE:\n{spec.prior_message or '(not recorded)'}"
+        + f"\n\nTHEIR REPLY:\n{spec.prior_reply}"
+        + "\n\nWrite the next message in this thread. Directly address the questions and "
+          "concerns they raised. Answer using ONLY the facts under CLAIMS; if they ask for "
+          "a specific you were not given (an exact date, a person's name), acknowledge it "
+          "plainly and say you'll follow up with it — do NOT invent facts. Sound like the "
+          "same person continuing the conversation, do not repeat your previous message, "
+          "and move the request forward naturally. Output only the message."
+    )
+
+
 def rewrite_user_prompt(spec: MoveSpec, dossier: Dossier, draft: str,
                         issues: list[str]) -> str:
     joined = "\n".join(f"- {i}" for i in issues)

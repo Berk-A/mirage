@@ -141,6 +141,14 @@ class Signals:
     def silent(self) -> bool:
         return not self.events
 
+    @property
+    def reply_text(self) -> str:
+        """The body of the first reply event, if any — what the target said back."""
+        for e in self.events:
+            if e.type is EventType.REPLY and e.body:
+                return e.body
+        return ""
+
 
 # --------------------------------------------------------------------------- #
 # Dossier (research → OODA). Kept minimal and provenance-first.
@@ -215,6 +223,11 @@ class MoveSpec:
     tone: str = ""
     subject: Optional[str] = None
     url: Optional[str] = None  # landing page to register+link, if any
+    # Thread context for a reply-aware follow-up. When `prior_reply` is set, this move
+    # continues an open thread: the writer must ANSWER what the target said rather than
+    # re-send a fresh ask. Both are plain text (what we last sent, what they replied).
+    prior_message: Optional[str] = None
+    prior_reply: Optional[str] = None
 
 
 @dataclass(frozen=True)
