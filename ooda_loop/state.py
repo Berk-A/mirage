@@ -51,6 +51,8 @@ class LoopState:
     last_message_body: Optional[str] = None
     last_reply: Optional[str] = None
     followups_on_current: int = 0
+    message_fingerprints: set[str] = field(default_factory=set)
+    abort_reason: Optional[str] = None
     # Adaptive reorientation: per-channel first-contact outcome ("engaged"/"silent"/
     # "suspicious"), and whether we've advanced from the door-opener to the event-backed
     # ask on the open thread. Lets the decider avoid dead channels and reorient.

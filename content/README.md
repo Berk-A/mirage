@@ -46,7 +46,7 @@ critic a smaller one; here they are just endpoints configured by env:
 ## Run it in the loop
 
 ```bash
-.venv/bin/python -m ooda_loop.run_live --renderer studio --target julius --max-contacts 3
+python -m ooda_loop.run_live --renderer studio --target julius --max-contacts 3
 ```
 
 Without `--renderer studio` the loop uses the neutral `FakeRenderer`.

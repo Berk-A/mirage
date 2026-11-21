@@ -303,6 +303,8 @@ class RenderedMessage:
     html: Optional[str] = None
     attachments: tuple[Any, ...] = ()
     page: Optional["RenderedPage"] = None
+    # Optional simulator story timestamp; omitted means server-side current time.
+    sent_at: Optional[str] = None
 
 
 @dataclass(frozen=True)

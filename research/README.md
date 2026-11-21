@@ -5,8 +5,8 @@ attacks from.
 
 ## Mission
 
-Given a target seed, emit a dossier that answers: what matters to this person *right
-now*, who could credibly contact them, and what they log into.
+Given one target from a challenge API scenario, emit a provenance-backed dossier from
+public sources. Report source gaps; a coverage article is not evidence of attendance.
 
 ## What it produces
 
@@ -65,7 +65,7 @@ research/
   extract.py      RawDoc -> provenance-stamped Fact triples (conservative)
   graph.py        KnowledgeGraph (NetworkX) + entity resolution + derived views + ground()
   pipeline.py     build_dossier() + GraphResearchProvider (DossierProvider+GroundingProvider)
-  seeds.py        public-OSINT seeds for the practice founders
+  seeds.py        scenario-roster seeds plus curated practice URLs
   catalog.py      ResearchCatalog — offline serving/validation snapshot (existing)
 ```
 

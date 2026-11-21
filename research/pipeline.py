@@ -8,6 +8,7 @@ same `Dossier`/`Fact` types, no loop change.
 """
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import Iterable, Optional, Sequence
 
 from core.models import Dossier, Fact
@@ -25,8 +26,14 @@ def build_graph(seed: Seed, collectors: Sequence[Collector]) -> KnowledgeGraph:
     for collector in collectors:
         try:
             docs = collector.collect(seed)
-        except Exception:
+        except Exception as exc:
+            graph.collection_warnings.append(
+                f"{type(collector).__name__} failed ({type(exc).__name__})"
+            )
             docs = []  # a dead source must never sink the whole run
+        graph.collection_warnings.extend(
+            str(warning) for warning in getattr(collector, "last_warnings", ())
+        )
         facts.extend(extract_all(docs, seed))
     graph.add_facts(facts)
     return graph
@@ -43,7 +50,7 @@ def build_dossier(
     as_of = as_of or today_iso()
     graph = graph if graph is not None else build_graph(seed, collectors)
 
-    hooks = graph.recent_hooks(seed.target_id)
+    hooks = graph.recent_hooks(seed.target_id, as_of=as_of, max_age_days=365)
     senders = graph.credible_senders(seed.target_id)
     vendors = graph.vendor_surface(seed.target_id)
     # The scenario role is authoritative ground truth; a page-extracted role only adds
@@ -51,6 +58,9 @@ def build_dossier(
     role = seed.role or graph.role_of(seed.target_id)
     facts = tuple(graph.facts_for(seed.target_id))
 
+    gaps = list(_gaps(hooks, senders, vendors, facts, as_of=as_of))
+    if graph.collection_warnings:
+        gaps.append(f"{len(graph.collection_warnings)} source collection warning(s); see dossier diagnostics")
     return Dossier(
         target_id=seed.target_id,
         display_name=seed.name,
@@ -61,7 +71,8 @@ def build_dossier(
         vendors=tuple(vendors),
         as_of=as_of,
         facts=facts,
-        gaps=_gaps(hooks, senders, vendors, facts),
+        gaps=tuple(gaps),
+        raw={"collection_warnings": tuple(graph.collection_warnings)},
     )
 
 
@@ -82,17 +93,43 @@ def _archetype(role: str) -> str:
     return "generic"
 
 
-def _gaps(hooks, senders, vendors, facts) -> tuple[str, ...]:
+def _gaps(hooks, senders, vendors, facts, *, as_of: Optional[str] = None) -> tuple[str, ...]:
     gaps: list[str] = []
     if not hooks:
-        gaps.append("no current hooks — add timestamped sources (feeds/talks/LinkedIn)")
+        gaps.append("no activity source within 365 days — add current dated sources")
     if not senders:
-        gaps.append("no credible senders — need colleagues/shared projects (LinkedIn)")
+        gaps.append("no source-backed colleague or connection edges")
     if not vendors:
         gaps.append("no known tools — add stack sources (GitHub/job posts/company blog)")
     if not facts:
         gaps.append("no facts collected — check seeds/collectors reachability")
+    if not any(f.predicate in {"works_at", "role_is"} for f in facts):
+        gaps.append("no source-backed organization or role fact")
+    try:
+        reference = date.fromisoformat((as_of or today_iso())[:10])
+    except ValueError:
+        reference = date.today()
+    event_cutoff = reference - timedelta(days=365)
+    if not any(
+        f.predicate in {"spoke_at", "attended_event"} and f.event_date
+        and event_cutoff <= _date_or_min(f.event_date) <= reference
+        for f in facts
+    ):
+        gaps.append("no verified event participation in the last 365 days")
+    if not any(
+        f.predicate == "scheduled_for" and f.event_date
+        and _date_or_min(f.event_date) > reference
+        for f in facts
+    ):
+        gaps.append("no verified future event schedule")
     return tuple(gaps)
+
+
+def _date_or_min(value: str) -> date:
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return date.min
 
 
 class GraphResearchProvider:

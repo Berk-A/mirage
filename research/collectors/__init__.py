@@ -7,6 +7,7 @@ need a scraping-API or headless backend — see research/ASSESSMENT.md — and w
 added here behind the same protocol with no change to the pipeline.
 """
 from .brightdata import BrightDataCollector, brightdata_available
+from .brave import BraveSearchCollector
 from .feeds import FeedCollector
 from .github import GitHubCollector
 from .web import HttpFetcher, WebCollector
@@ -18,4 +19,5 @@ __all__ = [
     "HttpFetcher",
     "BrightDataCollector",
     "brightdata_available",
+    "BraveSearchCollector",
 ]

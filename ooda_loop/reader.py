@@ -120,7 +120,7 @@ _COMPLIANCE_PHRASES = (
 # --------------------------------------------------------------------------- #
 # Form-field kinds — a submitted page counts by what was typed, decided by the
 # field name "the same way for every team" (target-API "Forms"). Matched on the
-# field name, lowercased, after stripping non-letters so "card-number", "cardNumber"
+# field name, lowercased, after stripping punctuation so "card-number", "cardNumber"
 # and "card_number" all collapse together.
 # --------------------------------------------------------------------------- #
 _SECRET_FIELDS = frozenset({
@@ -148,8 +148,8 @@ _WITHHELD = "(entered, not shown)"
 
 
 def _field_key(name: str) -> str:
-    """Normalize a field name to letters only, lowercased."""
-    return re.sub(r"[^a-z]", "", (name or "").lower())
+    """Normalize a field name, keeping digits used in names like 2fa_code."""
+    return re.sub(r"[^a-z0-9]", "", (name or "").lower())
 
 
 def _any(text: str, phrases: Iterable[str]) -> bool:

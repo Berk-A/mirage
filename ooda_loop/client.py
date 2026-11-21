@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import time
 import uuid
+from os import PathLike
 from typing import Any, Optional, Sequence
 
 import requests
@@ -22,9 +23,11 @@ from core.models import (
     Event,
     RenderedMessage,
     RenderedPage,
+    Scenario,
     Sender,
     SendResult,
     Session,
+    Target,
     TurnResult,
 )
 from core.parse import parse_events
@@ -127,6 +130,28 @@ class Revel8Client:
         )
 
     @staticmethod
+    def _parse_scenario(data: dict[str, Any]) -> Scenario:
+        targets = tuple(
+            Target(
+                id=str(row.get("id", "")),
+                name=str(row.get("name", "")),
+                role=str(row.get("role", "")),
+            )
+            for row in (data.get("targets") or ())
+            if isinstance(row, dict) and row.get("id")
+        )
+        return Scenario(
+            id=str(data.get("id", "")),
+            kind=str(data.get("kind", "")),
+            company=str(data.get("company", "")),
+            targets=targets,
+            objectives=tuple(data.get("objectives") or ()),
+            touch_budget=data.get("touch_budget"),
+            open=bool(data.get("open", False)),
+            raw=data,
+        )
+
+    @staticmethod
     def _from_block(sender: Optional[Sender]) -> Optional[dict[str, str]]:
         """Map a Sender to the API `from` object, or None when there is nothing to send."""
         if sender is None:
@@ -141,6 +166,56 @@ class Revel8Client:
     # ------------------------------------------------------------------ #
     # Sessions
     # ------------------------------------------------------------------ #
+    def list_scenarios(self) -> tuple[Scenario, ...]:
+        """Return the scenarios and targets visible to this team at the current time."""
+        data = self._request("GET", "/scenarios").json()
+        rows = data.get("scenarios", ()) if isinstance(data, dict) else data
+        return tuple(
+            self._parse_scenario(row)
+            for row in (rows or ())
+            if isinstance(row, dict) and row.get("id")
+        )
+
+    def list_sessions(self) -> tuple[Session, ...]:
+        """List this team's recent sessions, useful for recovery after interruption."""
+        data = self._request("GET", "/sessions").json()
+        rows = data.get("sessions", ()) if isinstance(data, dict) else data
+        return tuple(self._parse_session(row) for row in (rows or ())
+                     if isinstance(row, dict) and row.get("session_id"))
+
+    def list_channels(self) -> tuple[str, ...]:
+        """Return supported API channel ids without hardcoding the server's roster."""
+        data = self._request("GET", "/channels").json()
+        rows = data.get("channels", ()) if isinstance(data, dict) else data
+        names = []
+        for row in rows or ():
+            if isinstance(row, str):
+                names.append(row)
+            elif isinstance(row, dict):
+                name = row.get("id") or row.get("channel") or row.get("name")
+                if name:
+                    names.append(str(name))
+        return tuple(names)
+
+    def upload_asset(self, file_path: str | PathLike[str]) -> dict[str, Any]:
+        """Upload one challenge asset using the API's multipart `file` field."""
+        url = f"{self.base_url}/assets"
+        headers = {"Authorization": f"Bearer {self.api_key}"}
+        with open(file_path, "rb") as handle:
+            attempt = 0
+            while True:
+                handle.seek(0)
+                resp = self.session.post(
+                    url, files={"file": handle}, headers=headers, timeout=self.timeout
+                )
+                if resp.status_code < 400:
+                    return resp.json()
+                if resp.status_code in RETRYABLE_STATUSES and attempt < self.max_retries:
+                    attempt += 1
+                    time.sleep(self._backoff(attempt))
+                    continue
+                raise error_for_status(resp.status_code, self._body_of(resp))
+
     def new_session(self, scenario_id: str = "practice") -> Session:
         resp = self._request("POST", "/sessions", json_body={"scenario_id": scenario_id})
         return self._parse_session(resp.json())
@@ -173,6 +248,8 @@ class Revel8Client:
         body["body"] = message.html if message.html else message.body
         if message.attachments:
             body["attachments"] = list(message.attachments)
+        if message.sent_at:
+            body["sent_at"] = message.sent_at
 
         key = idempotency_key or str(uuid.uuid4())
         resp = self._request(
@@ -207,12 +284,15 @@ class Revel8Client:
     # Conversations
     # ------------------------------------------------------------------ #
     def start_conversation(
-        self, session_id: str, *, to: str, channel: str, sender: Optional[Sender] = None
+        self, session_id: str, *, to: str, channel: str, sender: Optional[Sender] = None,
+        sent_at: Optional[str] = None,
     ) -> ConversationStart:
         body: dict[str, Any] = {"to": to, "channel": channel}
         frm = self._from_block(sender)
         if frm:
             body["from"] = frm
+        if sent_at:
+            body["sent_at"] = sent_at
         key = str(uuid.uuid4())
         resp = self._request(
             "POST", f"/sessions/{session_id}/conversations",
@@ -228,12 +308,18 @@ class Revel8Client:
         )
 
     def say_turn(
-        self, conversation_id: str, text: str, *, idempotency_key: Optional[str] = None
+        self, conversation_id: str, text: str, *, idempotency_key: Optional[str] = None,
+        sent_at: Optional[str] = None, attachments: Optional[Sequence[Any]] = None,
     ) -> TurnResult:
         key = idempotency_key or str(uuid.uuid4())
+        body: dict[str, Any] = {"say": text}
+        if sent_at:
+            body["sent_at"] = sent_at
+        if attachments:
+            body["attachments"] = list(attachments)
         resp = self._request(
             "POST", f"/conversations/{conversation_id}/turns",
-            json_body={"say": text}, idempotency_key=key,
+            json_body=body, idempotency_key=key,
         )
         data = resp.json()
         return TurnResult(

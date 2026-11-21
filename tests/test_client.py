@@ -87,6 +87,49 @@ def test_get_and_end_session():
     assert responses.calls[-1].request.url.endswith("/sessions/s_1/end")
 
 
+@responses.activate
+def test_list_scenarios_parses_visible_roster():
+    responses.add(responses.GET, f"{BASE}/scenarios", json=[
+        {"id": "practice", "kind": "practice", "company": "revel8",
+         "touch_budget": 30, "open": True,
+         "targets": [{"id": "tom", "name": "Tom Mueller", "role": "Co-CEO"}]},
+        {"id": "eval", "kind": "eval", "open": False},
+    ], status=200)
+    scenarios = make_client().list_scenarios()
+    assert scenarios[0].company == "revel8"
+    assert scenarios[0].targets[0].id == "tom"
+    assert scenarios[0].touch_budget == 30
+    assert scenarios[1].targets == ()
+
+
+@responses.activate
+def test_lists_sessions_and_channels():
+    responses.add(responses.GET, f"{BASE}/sessions", json=[
+        {"session_id": "s_1", "scenario_id": "practice", "touches_used": 2}
+    ], status=200)
+    responses.add(responses.GET, f"{BASE}/channels", json={
+        "channels": ["email", {"id": "slack"}]
+    }, status=200)
+    client = make_client()
+    assert client.list_sessions()[0].session_id == "s_1"
+    assert client.list_channels() == ("email", "slack")
+
+
+@responses.activate
+def test_upload_asset_uses_multipart_file_field(tmp_path):
+    responses.add(responses.POST, f"{BASE}/assets",
+                  json={"asset_id": "a_1", "type": "image/png", "size": 4},
+                  status=201)
+    path = tmp_path / "pixel.png"
+    path.write_bytes(b"PNG!")
+    asset = make_client().upload_asset(path)
+    assert asset["asset_id"] == "a_1"
+    req = responses.calls[0].request
+    assert req.headers["Authorization"] == "Bearer test-key"
+    assert req.headers["Content-Type"].startswith("multipart/form-data;")
+    assert b'name="file"' in req.body
+
+
 # --------------------------------------------------------------------------- #
 # send_message
 # --------------------------------------------------------------------------- #
@@ -100,7 +143,9 @@ def test_send_message_parses_events_and_touches():
             "events": [
                 {"id": "e_7", "type": "link.opened", "url": "https://x.example/auth"},
                 {"id": "e_8", "type": "page.submitted", "page_id": "p_1",
-                 "fields": ["email", "password"]},
+                 "fields": ["email", "password"],
+                 "values": {"email": "tom@example.test",
+                            "password": "(entered, not shown)"}},
             ],
         },
         status=200,
@@ -110,6 +155,7 @@ def test_send_message_parses_events_and_touches():
         body="plain body",
         sender=Sender(name="Lena Hofer", address="lena@eventcrew-muc.de"),
         subject="Logistics",
+        sent_at="2026-11-23T09:14:00+01:00",
     )
     res = make_client().send_message("s_1", msg, to="julius")
 
@@ -119,12 +165,15 @@ def test_send_message_parses_events_and_touches():
     assert res.events[0].type is EventType.LINK_OPENED
     assert res.events[1].type is EventType.PAGE_SUBMITTED
     assert res.events[1].fields == ("email", "password")
+    assert res.events[1].values == {"email": "tom@example.test",
+                                    "password": "(entered, not shown)"}
 
     sent = _body(responses.calls[0])
     assert sent["to"] == "julius"
     assert sent["channel"] == "email"
     assert sent["from"] == {"name": "Lena Hofer", "address": "lena@eventcrew-muc.de"}
     assert sent["subject"] == "Logistics"
+    assert sent["sent_at"] == "2026-11-23T09:14:00+01:00"
     assert sent["body"] == "plain body"
     # Idempotency-Key is added for a send.
     assert responses.calls[0].request.headers.get("Idempotency-Key")
@@ -257,23 +306,28 @@ def test_start_conversation_and_say_turn():
 
     c = make_client()
     start = c.start_conversation("s_1", to="julius", channel="phone_call",
-                                 sender=Sender(name="Jonas", address="+49 89 123"))
+                                 sender=Sender(name="Jonas", address="+49 89 123"),
+                                 sent_at="2026-11-23T09:14:00+01:00")
     assert start.conversation_id == "c_1"
     assert start.status == "answered"
     assert start.persona_says == "Hello?"
     assert start.touches_used == 2
     conv_body = _body(responses.calls[0])
     assert conv_body == {"to": "julius", "channel": "phone_call",
+                         "sent_at": "2026-11-23T09:14:00+01:00",
                          "from": {"name": "Jonas", "address": "+49 89 123"}}
     assert responses.calls[0].request.headers.get("Idempotency-Key")
 
-    turn = c.say_turn("c_1", "Hi, this is IT support")
+    turn = c.say_turn("c_1", "Hi, this is IT support",
+                      sent_at="2026-11-23T09:15:00+01:00", attachments=["a_2"])
     assert turn.persona_says == "Who is this?"
     assert turn.ended is False
     assert turn.turns_used == 1
     assert len(turn.events) == 1
     assert turn.events[0].type is EventType.LINK_OPENED
-    assert _body(responses.calls[1]) == {"say": "Hi, this is IT support"}
+    assert _body(responses.calls[1]) == {"say": "Hi, this is IT support",
+                                         "sent_at": "2026-11-23T09:15:00+01:00",
+                                         "attachments": ["a_2"]}
     assert responses.calls[1].request.headers.get("Idempotency-Key")
 
     c.end_conversation("c_1")

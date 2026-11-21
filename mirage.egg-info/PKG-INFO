@@ -4,6 +4,18 @@ Version: 0.1.0
 Summary: Agentic social engineer for the revel8 challenge
 Requires-Python: >=3.10
 Requires-Dist: requests>=2.31
+Requires-Dist: networkx>=3.2
+Requires-Dist: feedparser>=6.0
+Requires-Dist: beautifulsoup4>=4.12
 Provides-Extra: dev
 Requires-Dist: pytest>=8; extra == "dev"
 Requires-Dist: responses>=0.25; extra == "dev"
+Provides-Extra: training
+Requires-Dist: datasets>=3; extra == "training"
+Requires-Dist: peft>=0.14; extra == "training"
+Requires-Dist: trl>=0.15; extra == "training"
+Requires-Dist: transformers>=4.46; extra == "training"
+Requires-Dist: accelerate>=1.2; extra == "training"
+Requires-Dist: bitsandbytes>=0.45; extra == "training"
+Provides-Extra: viewer
+Requires-Dist: streamlit>=1.40; extra == "viewer"

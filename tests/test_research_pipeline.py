@@ -181,6 +181,36 @@ def test_extract_ignores_pages_not_about_target():
     assert extract(doc, _seed()) == []
 
 
+def test_event_attendance_requires_explicit_statement_and_event_date():
+    seed = _seed()
+    article_only = RawDoc(
+        url="https://news.example/funding", title="Julius Muth at Cyber Summit",
+        text="Julius Muth and revel8 are covered in this funding article.",
+        published_date="2026-10-10",
+    )
+    assert not [f for f in extract(article_only, seed)
+                if f.predicate in {"spoke_at", "attended_event"}]
+
+    attended = RawDoc(
+        url="https://news.example/panel", title="Julius Muth spoke at Cyber Summit",
+        text="Julius Muth spoke at Cyber Summit on 2026-10-01.",
+        published_date="2026-10-10",
+    )
+    event = next(f for f in extract(attended, seed) if f.predicate == "spoke_at")
+    assert event.event_date == "2026-10-01"
+
+
+def test_future_event_requires_a_future_date_and_schedule_language():
+    scheduled = RawDoc(
+        url="https://events.example/summit", title="Julius Muth will speak at Cyber Summit",
+        text="Julius Muth will speak at Cyber Summit on 2099-03-01.",
+        published_date="2026-10-10",
+    )
+    event = next(f for f in extract(scheduled, _seed())
+                 if f.predicate == "scheduled_for")
+    assert event.event_date == "2099-03-01"
+
+
 def test_extract_github_tools_and_language():
     profile = RawDoc(url="https://github.com/jmuth", text="Company: @revel8", source_type="github",
                      meta={"kind": "profile"})
@@ -233,6 +263,17 @@ def test_recent_hooks_ranked_and_groundable():
     assert g.ground(hooks[0].detail, target_id="julius") is not None
 
 
+def test_dossier_recent_hooks_can_exclude_stale_coverage():
+    g = KnowledgeGraph()
+    g.add_facts([
+        _fact("engaged_with", "old funding", claim="old", event="2024-01-01"),
+        _fact("engaged_with", "current panel", claim="current", event="2026-10-15"),
+        _fact("spoke_at", "future summit", claim="future", event="2027-03-01"),
+    ])
+    hooks = g.recent_hooks("julius", as_of="2026-11-21", max_age_days=365)
+    assert {hook.topic for hook in hooks} == {"current panel", "future summit"}
+
+
 def test_credible_senders_from_colleagues():
     g = KnowledgeGraph()
     g.add_person("julius", name="Julius Muth")
@@ -277,7 +318,7 @@ def _provider():
     http = FakeHttp({url: FetchResult(url=url, status=200, text=_web_doc_fixture(),
                                       content_type="text/html")})
     seed = _seed(urls=(url,))
-    return GraphResearchProvider([seed], [_open_web(http)], as_of="2026-11-21"), seed
+    return GraphResearchProvider([seed], [_open_web(http)], as_of="2025-09-25"), seed
 
 
 def test_build_dossier_from_fixture():
@@ -285,7 +326,7 @@ def test_build_dossier_from_fixture():
     url = "https://tech.eu/revel8"
     http = FakeHttp({url: FetchResult(url=url, status=200, text=_web_doc_fixture(),
                                       content_type="text/html")})
-    dossier = build_dossier(seed, [_open_web(http)], as_of="2026-11-21")
+    dossier = build_dossier(seed, [_open_web(http)], as_of="2025-09-25")
     assert dossier.target_id == "julius"
     assert dossier.role == "Co-Founder & Co-CEO"  # authoritative seed role, not shadowed
     assert dossier.archetype == "executive_founder"

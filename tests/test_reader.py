@@ -120,6 +120,14 @@ def test_withheld_secret_outweighs_basic_fields():
     assert s.incident.objective is Objective.CREDENTIALS
 
 
+def test_two_factor_code_field_keeps_leading_digit():
+    s = R.read([page_submitted(fields=("email", "2fa_code"),
+                               values={"email": "tom@example.test",
+                                       "2fa_code": "(entered, not shown)"})])
+    assert s.incident is not None
+    assert s.incident.objective is Objective.CREDENTIALS
+
+
 # --------------------------------------------------------------------------- #
 # Priority: concrete non-verbal wins outweigh a reply
 # --------------------------------------------------------------------------- #

@@ -29,19 +29,53 @@ Three parts, built against fixed interfaces so they can move in parallel:
 - **Architecture 40** (jury) — the architecture page + turn-by-turn replay of runs.
 - **Pitch 15** (jury) — approach + one real thread.
 
-## Quickstart (terminal)
+## Windows setup (PowerShell, no virtual environment)
 
-```bash
-cp .env.example .env            # then paste your team key into .env
-set -a; source .env; set +a     # export REVEL8_API_KEY and REVEL8_API_BASE
+Run these commands from the repository folder. They install into the Python interpreter
+already on PATH and do not create or activate a venv.
 
-scripts/api.sh scenarios        # list scenarios + objectives
-scripts/api.sh new practice     # open a session, prints the session_id
-scripts/api.sh send <sid> julius email "Speaker logistics" "Hi Julius, ..."
-scripts/api.sh events <sid>     # replay every event in the session
+```powershell
+cd C:\Users\chand\challenge_revel8\mirage
+python --version
+python -m pip install -e ".[dev,viewer]"
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
 ```
 
-Full flow and raw `curl` equivalents are in [`scripts/README.md`](scripts/README.md).
+In `.env`, fill `REVEL8_API_KEY` from the challenge team key and the AMD Radeon Cloud
+OpenAI-compatible endpoint values `MIRAGE_LLM_BASE`, `MIRAGE_LLM_KEY`, and
+`MIRAGE_WRITER_MODEL` and `MIRAGE_CRITIC_MODEL`. Use the exact model id reported by the
+hosted Qwen service for both model fields if the deployment serves one model.
+`BRAVE_SEARCH_API_KEY` enables scenario-scoped public-web discovery; the challenge API
+roster is the source of which targets enter the research pipeline. Save `.env` and keep it
+local.
+
+Check that the challenge API roster is reachable:
+
+```powershell
+python -c "from experiments.run_ooda import load_env; load_env(); from ooda_loop.client import Revel8Client; print([(s.id, [t.id for t in s.targets]) for s in Revel8Client().list_scenarios()])"
+```
+
+Check the configured model endpoint before spending challenge touches:
+
+```powershell
+python -c "from experiments.run_ooda import load_env; load_env(); from content.llm import OpenAICompatLLM; print(OpenAICompatLLM().complete([{'role':'user','content':'Reply with READY.'}], max_tokens=8))"
+```
+
+Run a small practice pass; target ids default to the visible scenario roster:
+
+```powershell
+python -m experiments.run_ooda --scenario practice --provider real --max-contacts 5
+```
+
+When the challenge team opens eval, its visible roster can be selected with:
+
+```powershell
+python -m experiments.run_ooda --scenario eval --provider real --max-contacts 10
+```
+
+To replay the automated checks later from this same PowerShell window, run
+`python -m pytest`. No test command is run automatically by the setup steps above.
 
 ## Key constraints (from the API docs)
 

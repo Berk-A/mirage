@@ -1,5 +1,19 @@
 requests>=2.31
+networkx>=3.2
+feedparser>=6.0
+beautifulsoup4>=4.12
 
 [dev]
 pytest>=8
 responses>=0.25
+
+[training]
+datasets>=3
+peft>=0.14
+trl>=0.15
+transformers>=4.46
+accelerate>=1.2
+bitsandbytes>=0.45
+
+[viewer]
+streamlit>=1.40
