@@ -140,12 +140,13 @@ def test_attachment_outweighs_disclosure_reply():
 # --------------------------------------------------------------------------- #
 # Silence
 # --------------------------------------------------------------------------- #
-def test_silence_is_mild_uncertainty():
+def test_silence_is_not_suspicion():
+    # A non-response is not wariness, just quiet — a low observation (the state cools on it).
     s = R.read([])
     assert s.silent is True
     assert s.incident is None
     assert s.replied is False
-    assert 0.3 <= s.suspicion <= 0.5
+    assert s.suspicion <= 0.2
     assert s.events == ()
 
 
@@ -158,10 +159,18 @@ def test_verification_pushback_raises_suspicion():
     assert s.suspicion >= 0.7
 
 
-def test_question_without_compliance_is_moderate_suspicion():
+def test_plain_question_stays_in_the_warm_band():
+    # A curious question (an open door, not hostility) stays below the guarded line, so
+    # the loop keeps building rapport rather than de-escalating.
     s = R.read([reply("What is this regarding exactly?")])
     assert s.incident is None
-    assert 0.5 <= s.suspicion < 0.8
+    assert s.suspicion < 0.4
+
+
+def test_verification_demand_is_distinctly_higher_than_a_plain_question():
+    probe = R.read([reply("What is this regarding exactly?")]).suspicion
+    hostile = R.read([reply("Who are you and how did you get this? Is this a scam?")]).suspicion
+    assert hostile >= 0.7 > probe   # pushback reads far higher than a benign question
 
 
 def test_compliance_reply_keeps_suspicion_low():

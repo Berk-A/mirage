@@ -140,8 +140,8 @@ class OodaLoop:
             },
         )
         state.last_message_body = rendered.body              # thread memory for follow-ups
-        state.record_contact(spec, signals)                 # Orient
-        self.memory.set_suspicion(state.session_id, signals.suspicion)
+        state.record_contact(spec, signals)                 # Orient (integrates suspicion)
+        self.memory.set_suspicion(state.session_id, state.suspicion)
         self.memory.journal(state.session_id, "contact", {
             "objective": spec.objective.value,
             "channel": spec.channel,
@@ -149,7 +149,8 @@ class OodaLoop:
             "message_id": result.message_id,
             "events": [e.type.value for e in signals.events],
             "incident": signals.incident.objective.value if signals.incident else None,
-            "suspicion": signals.suspicion,
+            "observed_suspicion": signals.suspicion,
+            "suspicion": state.suspicion,
         })
 
         if signals.incident is not None:

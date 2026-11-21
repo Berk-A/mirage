@@ -41,20 +41,26 @@ events (a secret submit, an opened attachment), never from reply wording.
 * `objective`: a hint about what the current move was pursuing; accepted and ignored
   here (the event itself determines the incident), reserved for future weighting.
 
-Suspicion heuristic (in [0, 1]), highest-priority branch wins
--------------------------------------------------------------
-* no events at all (silence) -> 0.4: mild uncertainty, neither a win nor a clear snub.
+Suspicion OBSERVATION (in [0, 1]), highest-priority branch wins
+---------------------------------------------------------------
+This is the *per-touch reading*, not the running estimate — `LoopState` integrates
+these over the conversation (fast up on real wariness, slow decay on reassurance, cools
+on silence), so suspicion is a trajectory, not just the last message.
+* no events at all (silence) -> 0.10: a non-response is NOT suspicion, just quiet; the
+  state cools the running estimate when this lands.
 * a concrete non-verbal win (page submitted / attachment opened) with no pushback in
   any reply -> 0.10: they acted, so they were convinced.
 * verification pushback in a reply ("who are you", "how did you get this",
-  "can you verify", "I'll check with", "not sure", "is this legit", "why do you need",
-  ...) -> 0.85: they are challenging identity/legitimacy.
-* a reply that asks a question but shows no compliance -> 0.60: hesitant, probing.
+  "can you verify", "I'll check with", "is this legit", "why do you need", ...) -> 0.78:
+  wary — high, but one identity probe is the EXPECTED opening move, so a single one does
+  not reach the abort line; the state only crosses it on sustained pushback.
+* a reply that asks a plain question but shows no compliance -> 0.38: a curious probe /
+  an open door, kept in the warm band so we keep building rapport, not de-escalating.
 * a reply in a compliant/agreeable tone ("sure", "happy to", "no problem", "done") or
   any action-taken wording -> 0.12: a clean cooperative turn.
-* any other reply (neutral) -> 0.40.
+* any other reply (neutral) -> 0.28: engaged, low — still warm.
 * no reply but a link opened -> 0.20: silent engagement, mildly encouraging.
-* anything else -> 0.30.
+* anything else -> 0.25.
 
 Contradiction detection across turns is intentionally out of scope here (the reader
 sees one batch, not the session history); the orchestrator owns cross-touch memory.
@@ -312,7 +318,7 @@ class ReactionReader:
     # ------------------------------------------------------------------ #
     def _suspicion(self, *, events, replied, reply_texts, opened_link, concrete_win) -> float:
         if not events:
-            return 0.4  # silence: mild uncertainty
+            return 0.10  # silence is non-engagement, not suspicion (the state cools on it)
 
         combined = " ".join(reply_texts)
         pushback = _any(combined, _PUSHBACK_PHRASES)
@@ -325,15 +331,15 @@ class ReactionReader:
         if concrete_win and not pushback:
             score = 0.10
         elif replied and pushback:
-            score = 0.85
+            score = 0.78     # wary, but one probe shouldn't abort — needs to be sustained
         elif replied and question and not compliance:
-            score = 0.60
+            score = 0.38     # a curious probe / open door — stay in the warm band
         elif replied and compliance:
             score = 0.12
         elif replied:
-            score = 0.40
+            score = 0.28     # neutral engaged reply — still warm
         elif opened_link:
             score = 0.20
         else:
-            score = 0.30
+            score = 0.25
         return max(0.0, min(1.0, score))

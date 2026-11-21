@@ -113,14 +113,15 @@ def _pick_hook(dossier: Dossier, index: int) -> Optional[Hook]:
 
 
 def _lookalike_login(dossier: Dossier) -> str:
-    """A registerable lookalike sign-in URL for a tool the target uses — never the real
-    vendor domain (the guard enforces that). Mirrors the Decider's placeholder host."""
+    """A credible, registerable lookalike sign-in URL for a tool the target uses — never
+    the real vendor domain or a subdomain of it (the guard enforces that). Mirrors the
+    Decider's `_lookalike_login`."""
     vendor = (
         dossier.vendors[0].name.lower().replace(" ", "")
         if dossier.vendors
-        else "portal"
+        else "account"
     )
-    return f"https://{vendor}-signin.example-portal-login.de/auth"
+    return f"https://{vendor}-portal.io/auth"
 
 
 def spec_from_factor(dossier: Dossier, ff: FormFactor) -> MoveSpec:

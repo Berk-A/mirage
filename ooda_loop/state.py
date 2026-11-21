@@ -69,6 +69,10 @@ class LoopState:
     # disclosure door-opener, push an ACTION (open a file), then CREDENTIALS (sign in).
     pushed_action: bool = False
     pushed_ask: bool = False
+    # Patience on a warm-but-paused thread: channels that EVER got a reply (a thread worth
+    # re-engaging), and how many times we've nudged a quiet one before rotating away.
+    ever_engaged: set[str] = field(default_factory=set)
+    reengage_nudges: int = 0
     # Story-time clock: anchor + minutes elapsed. The decider stamps each contact with
     # `story_time` and advances the clock so touches don't all land at once.
     story_start: datetime = field(default_factory=_story_anchor)
@@ -87,6 +91,22 @@ class LoopState:
         is not after the previous contact's)."""
         self.story_minutes += max(0, int(minutes))
 
+    def update_suspicion(self, observed: float, *, silent: bool) -> None:
+        """Integrate a per-touch suspicion OBSERVATION into the running estimate — the
+        suspicion "motor". Asymmetric and memoryful, like a real person's wariness:
+          * SILENCE cools it (a non-response is not suspicion, just quiet);
+          * fresh wariness registers FAST (jump up to the observation), and sustained
+            wariness compounds toward the abort line (one probe is fine, hostility adds up);
+          * reassurance DECAYS it slowly (one warm reply doesn't erase prior wariness)."""
+        if silent:
+            self.suspicion = round(max(0.0, self.suspicion - 0.08), 3)
+            return
+        if observed >= self.suspicion:
+            compound = 0.12 if (observed >= 0.6 and self.suspicion >= 0.5) else 0.0
+            self.suspicion = round(min(1.0, observed + compound), 3)
+        else:
+            self.suspicion = round(0.6 * self.suspicion + 0.4 * observed, 3)
+
     def current_objective(self) -> Optional[Objective]:
         if self.obj_index >= len(self.objective_queue):
             return None
@@ -104,11 +124,13 @@ class LoopState:
         self.channels_tried.add(spec.channel)
         self.senders_tried.add(spec.sender.address or spec.sender.name)
         self.last_signals = signals
-        self.suspicion = signals.suspicion
+        self.update_suspicion(signals.suspicion, silent=signals.silent)
         self.last_reply = signals.reply_text or None
         if spec.prior_reply is not None:   # this contact was itself a follow-up
             self.followups_on_current += 1
         # Remember how this channel reacted, so the decider can avoid dead channels.
+        if signals.replied:
+            self.ever_engaged.add(spec.channel)   # a thread worth re-engaging later
         if signals.incident is None:
             if signals.suspicion >= 0.7:
                 self.channel_outcomes[spec.channel] = "suspicious"

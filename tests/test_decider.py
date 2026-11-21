@@ -56,7 +56,7 @@ def test_credentials_move_carries_lookalike_url():
     state, d = make_state(budget=1)   # budget-tight -> credentials
     decision = Decider().decide(state, d)
     assert decision.move.objective is Objective.CREDENTIALS
-    assert decision.move.url and "example-portal-login.de" in decision.move.url
+    assert decision.move.url and "-portal.io" in decision.move.url
 
 
 def test_pacing_stamps_moves_and_only_moves_forward():
@@ -75,3 +75,54 @@ def test_pacing_stamps_moves_and_only_moves_forward():
 def test_pacing_can_be_disabled():
     state, d = make_state()
     assert Decider(pace=False).decide(state, d).move.sent_at is None
+
+
+# --------------------------------------------------------------------------- #
+# Suspicion motor: a running, memoryful estimate — not the last message
+# --------------------------------------------------------------------------- #
+def test_suspicion_motor_fast_up_slow_down_and_cools_on_silence():
+    state, _ = make_state()
+    state.update_suspicion(0.78, silent=False)      # a wary reply
+    assert state.suspicion == 0.78                  # registers fast
+    state.update_suspicion(0.12, silent=False)      # one warm reply
+    assert 0.3 < state.suspicion < 0.78             # decays slowly, not reset to 0.12
+    before = state.suspicion
+    state.update_suspicion(0.10, silent=True)       # silence
+    assert state.suspicion < before                 # cools — silence is not suspicion
+
+
+def test_one_probe_does_not_abort_but_sustained_pushback_does():
+    state, _ = make_state()
+    abort = Decider().suspicion_abort
+    state.update_suspicion(0.78, silent=False)      # first identity probe
+    assert state.suspicion < abort                  # one probe is the expected opener
+    state.update_suspicion(0.78, silent=False)      # sustained hostility
+    assert state.suspicion >= abort                 # compounds past the abort line
+
+
+# --------------------------------------------------------------------------- #
+# Warm-thread patience: re-engage an engaged channel before rotating away
+# --------------------------------------------------------------------------- #
+def test_reengages_a_warm_channel_on_silence_before_rotating():
+    state, d = make_state()
+    state.contacts_used = 2
+    state.ever_engaged.add("slack")                 # slack replied once...
+    state.channel_outcomes["slack"] = "silent"      # ...then this follow-up went quiet
+    state.last_reply = "which event is this?"
+    state.last_signals = Signals(events=(), replied=False)   # silence now
+    m = Decider().decide(state, d).move
+    assert m.channel == "slack"                     # patient re-engage, not a fresh channel
+    assert m.prior_reply == "which event is this?"  # answers their last reply
+    assert m.objective is Objective.DISCLOSURE
+
+
+def test_rotates_to_fresh_channel_once_reengage_budget_spent():
+    state, d = make_state()
+    state.contacts_used = 4
+    state.ever_engaged.add("slack")
+    state.channels_tried.add("slack")               # slack already tried
+    state.last_reply = "ok"
+    state.last_signals = Signals(events=(), replied=False)
+    state.reengage_nudges = 2                        # already nudged the max
+    m = Decider(max_reengage=2).decide(state, d).move
+    assert m.channel != "slack"                     # gives up on the quiet thread, rotates

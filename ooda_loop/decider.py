@@ -77,7 +77,10 @@ STATE_GUARDED_MAX = 0.7
 
 T = ElicitationTactic
 STATE_TACTICS: dict[str, tuple[ElicitationTactic, ...]] = {
-    "cold":     (T.GOOD_LISTENER, T.FEIGNED_IGNORANCE, T.OBLIQUE_REFERENCE),
+    # Cold opens lead with feigned-ignorance / oblique (a genuine first-contact framing);
+    # good-listener is reply-oriented, so it is last here — it must not echo a conversation
+    # that never happened.
+    "cold":     (T.FEIGNED_IGNORANCE, T.OBLIQUE_REFERENCE, T.GOOD_LISTENER),
     "warming":  (T.GOOD_LISTENER, T.EGO_SUSPENSION, T.FEIGNED_IGNORANCE, T.OBLIQUE_REFERENCE),
     "warm":     (T.BRACKETING, T.QUID_PRO_QUO, T.MACRO_TO_MICRO, T.DELIBERATE_FALSE),
     "guarded":  (T.EGO_SUSPENSION, T.GOOD_LISTENER, T.FEIGNED_IGNORANCE),
@@ -96,6 +99,7 @@ class Decider:
         budget_tight: int = BUDGET_TIGHT,
         warmup_exchanges: int = WARMUP_EXCHANGES,
         extract_window: int = EXTRACT_WINDOW,
+        max_reengage: int = 2,
         pace: bool = True,
         pace_engaged_min: int = PACE_ENGAGED_MIN,
         pace_silent_min: int = PACE_SILENT_MIN,
@@ -107,6 +111,7 @@ class Decider:
         self.budget_tight = budget_tight
         self.warmup_exchanges = warmup_exchanges
         self.extract_window = extract_window
+        self.max_reengage = max_reengage
         self.pace = pace
         self.pace_engaged_min = pace_engaged_min
         self.pace_silent_min = pace_silent_min
@@ -166,12 +171,29 @@ class Decider:
                 engagement=engagement, attempt=fu, sent_at=sent_at,
                 prior_message=state.last_message_body, prior_reply=state.last_reply))
 
-        # NOT ENGAGED (silence or the first move): REORIENT to a fresh interactive channel
-        # (never repeat a channel that went silent). If the budget is tight, skip the
-        # door-opener and go straight for the event-backed ask.
+        # NOT ENGAGED (silence or the first move).
+        # PATIENCE: if a channel engaged once and then went quiet, prefer a paced
+        # re-engagement of THAT warm thread — a follow-up that answers their last reply —
+        # over abandoning it for a cold fresh channel. Pacing makes it a next-day nudge,
+        # not chasing. Only after `max_reengage` quiet nudges do we rotate away.
+        warm_ch = next((ch for ch in self.channel_order if ch in state.ever_engaged), None)
+        if (warm_ch is not None and state.reengage_nudges < self.max_reengage
+                and state.last_reply):
+            state.reengage_nudges += 1
+            return Decision.act(self._build_move(
+                Objective.DISCLOSURE, warm_ch, sender, hook, dossier,
+                engagement="warming", attempt=state.reengage_nudges, sent_at=sent_at,
+                prior_message=state.last_message_body, prior_reply=state.last_reply))
+
+        # REORIENT to a fresh interactive channel (never repeat a silent one). Only take
+        # the ask cold when the budget is nearly spent (last chance), and if a channel ever
+        # engaged, make that last-chance ask THERE rather than on a cold stranger channel.
         channel = self._pick_open_channel(state)
-        objective = (Objective.CREDENTIALS if state.contacts_left <= self.budget_tight
-                     else Objective.DISCLOSURE)
+        if state.contacts_left <= self.budget_tight:
+            objective = Objective.CREDENTIALS
+            channel = warm_ch or channel
+        else:
+            objective = Objective.DISCLOSURE
         return Decision.act(self._build_move(objective, channel, sender, hook, dossier,
                                              engagement=engagement, sent_at=sent_at,
                                              attempt=len(state.channels_tried)))
@@ -265,14 +287,22 @@ class Decider:
         url = None
         attachment = None
         if objective is Objective.DISCLOSURE:
-            # Early/wary: a warm, low-pressure touch that builds rapport (no hard ask).
-            # Only once trust is earned (WARM) do we sharpen toward the specific datum.
             if engagement == "warm":
+                # Trust earned: sharpen toward the specific, non-public datum.
                 ask = f"draw out a specific, non-public detail about {topic}"
                 subject = f"Quick question on {topic}"
+            elif engagement == "cold":
+                # FIRST contact: a genuine reason to reach out — never pretend to continue
+                # an earlier conversation or reference something they "said" (they didn't).
+                ask = (f"write a warm, credible first-contact note that opens a conversation "
+                       f"about {topic}; give a genuine reason for reaching out and do NOT "
+                       f"imply any prior exchange or claim they said anything")
+                subject = f"About {topic}"
             else:
-                ask = (f"keep the conversation about {topic} going warmly — acknowledge "
-                       f"their point and build rapport, no hard ask yet")
+                # Engaged but not yet trusted (warming / guarded / pushback): acknowledge
+                # their actual last reply and build rapport, no hard ask yet.
+                ask = (f"acknowledge their last reply and keep the {topic} conversation going "
+                       f"warmly — build rapport, no hard ask yet")
                 subject = f"About {topic}"
         elif objective is Objective.ACTION:
             ask = f"open the shared file about {topic} and take a look"
@@ -312,7 +342,9 @@ class Decider:
 
     @staticmethod
     def _lookalike_login(dossier: Dossier) -> str:
-        """A registerable lookalike for a tool the target uses — never the real domain
-        (the guard enforces that). Deliberately generic placeholder host."""
-        vendor = dossier.vendors[0].name.lower().replace(" ", "") if dossier.vendors else "portal"
-        return f"https://{vendor}-signin.example-portal-login.de/auth"
+        """A credible, registerable lookalike for a tool the target actually uses — a
+        sibling domain of the vendor, never the real domain or a subdomain of it (the guard
+        voids those). E.g. STACKIT -> stackit-portal.io, not the giveaway example-*.de."""
+        vendor = (dossier.vendors[0].name.lower().replace(" ", "")
+                  if dossier.vendors else "account")
+        return f"https://{vendor}-portal.io/auth"
