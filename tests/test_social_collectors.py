@@ -212,6 +212,24 @@ def test_extract_social_emits_nothing_when_name_mismatches_target():
     assert extract(doc, _seed()) == []
 
 
+def test_social_hooks_are_distinct_per_post_and_content_derived():
+    """Each dated post stays its own hook (not collapsed by topic dedup), and the topic is
+    the post's own wording — not a mis-fired news-headline class."""
+    doc = _social_doc(
+        {"name": "Julius Muth", "company": "revel8"},
+        posts=[
+            {"text": "No such thing as too much glitter at our launch party",
+             "date": "2025-11-20"},
+            {"text": "Reflecting on a great quarter with the team", "date": "2025-11-10"},
+        ],
+    )
+    hooks = [f for f in extract(doc, _seed()) if f.predicate == "engaged_with"]
+    assert len(hooks) == 2  # distinct topics → both survive the graph's dedup
+    topics = {f.object_value for f in hooks}
+    assert len(topics) == 2
+    assert "funding round" not in " ".join(topics).lower()  # no headline-class mislabel
+
+
 def test_extract_social_skips_undated_posts_for_hooks():
     doc = _social_doc(
         {"name": "Julius Muth", "company": "revel8"},

@@ -310,13 +310,26 @@ def _extract_social(doc: RawDoc, seed: Seed) -> list[Fact]:
         snippet = str(post.get("text") or "").strip()
         if not event_date or not snippet:
             continue  # only dated posts become hooks (recency needs a real date)
-        topic = _headline_topic(snippet, seed) or f"their recent {label} activity"
+        # Topic = the post's OWN leading clause — distinct per post (so each dated post
+        # stays its own hook, not collapsed by the graph's topic dedup) and accurate (a
+        # social caption is not a news headline, so the headline classifier would mislabel
+        # it, e.g. a 'glitter' post as 'a funding round').
+        topic = _social_post_topic(snippet) or f"their recent {label} activity"
         short = snippet[:120].strip()
         facts.append(_fact(seed, "engaged_with", topic, doc,
                            claim=f'On {event_date}, {name} posted on {label}: "{short}".',
                            confidence=0.5, event_date=str(event_date)))
         hooks_added += 1
     return facts
+
+
+def _social_post_topic(text: str, *, max_words: int = 8) -> str:
+    """A short, accurate Topic label from a post's own leading clause (first sentence or
+    ~`max_words` words). Keeps each post a distinct hook without inventing a classification."""
+    head = re.split(r"(?<=[.!?])\s|[\n\r]", text.strip(), maxsplit=1)[0].strip()
+    words = head.split()
+    slug = " ".join(words[:max_words]).strip(" \"'“”‘’-–—:·•")
+    return slug
 
 
 def _strip_employer(title: str) -> str:
