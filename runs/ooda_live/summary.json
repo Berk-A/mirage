@@ -1,0 +1,168 @@
+[
+  {
+    "target": "julius",
+    "session": "s_ff17d0e8aa",
+    "contacts": 1,
+    "won": false,
+    "incident": null,
+    "stop_reason": "too_suspicious",
+    "seconds": 11.2,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.85
+      }
+    ]
+  },
+  {
+    "target": "tom",
+    "session": "s_72c5aafa44",
+    "contacts": 9,
+    "won": false,
+    "incident": null,
+    "stop_reason": "objectives_exhausted",
+    "seconds": 78.4,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.6
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.6
+      },
+      {
+        "objective": "disclosure",
+        "channel": "whatsapp",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "slack",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "whatsapp",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "whatsapp",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      }
+    ]
+  },
+  {
+    "target": "robert",
+    "session": "s_0e74746f37",
+    "contacts": 9,
+    "won": false,
+    "incident": null,
+    "stop_reason": "objectives_exhausted",
+    "seconds": 71.7,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.6
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "disclosure",
+        "channel": "whatsapp",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "slack",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "whatsapp",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "whatsapp",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      }
+    ]
+  }
+]

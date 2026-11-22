@@ -1,0 +1,77 @@
+{
+  "target_id": "tom",
+  "display_name": "Tom Müller",
+  "role": "Co-Founder & Co-CEO, revel8 (product)",
+  "archetype": "executive_founder",
+  "hooks": [
+    {
+      "topic": "their investor Merantix Capital",
+      "detail": "revel8 is backed by Merantix Capital.",
+      "source_url": "https://startupfundraising.com/founders/tom-m-ller-revel8",
+      "date": "2025-09-25",
+      "confidence": 0.55
+    },
+    {
+      "topic": "the recent funding round",
+      "detail": "revel8 raised €7 million.",
+      "source_url": "https://www.revel8.ai/",
+      "date": "2025-09-25",
+      "confidence": 0.55
+    },
+    {
+      "topic": "their investor Fortino Capital",
+      "detail": "revel8 is backed by Fortino Capital.",
+      "source_url": "https://tech.eu/2025/09/25/revel8-nets-eur7-million-to-fight-ai-powered-cyberattacks/",
+      "date": "2025-09-25",
+      "confidence": 0.55
+    },
+    {
+      "topic": "the company's growth",
+      "detail": "Tom Müller and revel8 were covered by de.linkedin.com: \"revel8\".",
+      "source_url": "https://de.linkedin.com/company/revel8ai",
+      "date": "2026-11-22",
+      "confidence": 0.45
+    },
+    {
+      "topic": "their presence on SoundCloud",
+      "detail": "Tom Müller is active on SoundCloud (https://soundcloud.com/tom-mueller).",
+      "source_url": "https://soundcloud.com/tom-mueller",
+      "date": "2026-11-22",
+      "confidence": 0.4
+    }
+  ],
+  "senders": [
+    {
+      "name": "Julius Muth",
+      "address": "julius.muth@revel8-team.de",
+      "rationale": "Tom Müller and Julius Muth both work at revel8."
+    },
+    {
+      "name": "Robert Seilbeck",
+      "address": "robert.seilbeck@revel8-team.de",
+      "rationale": "Tom Müller and Robert Seilbeck both work at revel8."
+    }
+  ],
+  "vendors": [
+    {
+      "name": "STACKIT",
+      "login_url": "https://stackit.cloud"
+    },
+    {
+      "name": "GitHub",
+      "login_url": "https://github.com"
+    },
+    {
+      "name": "Calendly",
+      "login_url": "https://calendly.com"
+    },
+    {
+      "name": "Replit",
+      "login_url": "https://replit.com"
+    },
+    {
+      "name": "Trello",
+      "login_url": "https://trello.com"
+    }
+  ]
+}

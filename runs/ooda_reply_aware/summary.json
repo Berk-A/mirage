@@ -1,0 +1,224 @@
+[
+  {
+    "target": "julius",
+    "session": "s_72e34b8115",
+    "contacts": 9,
+    "won": false,
+    "incident": null,
+    "stop_reason": "objectives_exhausted",
+    "seconds": 84.0,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "slack",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "whatsapp",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "whatsapp",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.4
+      }
+    ]
+  },
+  {
+    "target": "tom",
+    "session": "s_55f9ddfdc5",
+    "contacts": 9,
+    "won": false,
+    "incident": null,
+    "stop_reason": "objectives_exhausted",
+    "seconds": 74.6,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.6
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "slack",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "whatsapp",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "whatsapp",
+        "sender": "sofia@productweek-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      }
+    ]
+  },
+  {
+    "target": "robert",
+    "session": "s_15c03b575f",
+    "contacts": 9,
+    "won": false,
+    "incident": null,
+    "stop_reason": "objectives_exhausted",
+    "seconds": 72.2,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.6
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "slack",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "whatsapp",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "credentials",
+        "channel": "whatsapp",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      }
+    ]
+  }
+]

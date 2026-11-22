@@ -1,0 +1,70 @@
+[
+  {
+    "target": "julius",
+    "session": "s_f0ba99fad8",
+    "contacts": 1,
+    "won": true,
+    "incident": "disclosure",
+    "stop_reason": "incident",
+    "seconds": 14.4,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "Tom M\u00fcller",
+        "incident": "disclosure",
+        "suspicion": 0.6
+      }
+    ]
+  },
+  {
+    "target": "tom",
+    "session": "s_d85029ffe8",
+    "contacts": 3,
+    "won": true,
+    "incident": "action",
+    "stop_reason": "incident",
+    "seconds": 30.4,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "Julius Muth",
+        "incident": null,
+        "suspicion": 0.6
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "Julius Muth",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "Julius Muth",
+        "incident": "action",
+        "suspicion": 0.12
+      }
+    ]
+  },
+  {
+    "target": "robert",
+    "session": "s_e1b79e5674",
+    "contacts": 1,
+    "won": false,
+    "incident": null,
+    "stop_reason": "too_suspicious",
+    "seconds": 76.3,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "Julius Muth",
+        "incident": null,
+        "suspicion": 0.85
+      }
+    ]
+  }
+]

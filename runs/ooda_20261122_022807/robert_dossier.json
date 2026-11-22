@@ -1,0 +1,51 @@
+{
+  "target_id": "robert",
+  "display_name": "Robert Seilbeck",
+  "role": "Co-Founder & CTO, revel8",
+  "archetype": "cto/technical",
+  "hooks": [
+    {
+      "topic": "cloud infrastructure migration",
+      "detail": "mid-migration of core services to a new managed cloud provider",
+      "source_url": "https://cloudonboarding-eu.example/cases/revel8-synthetic",
+      "date": "2026-11-19",
+      "confidence": 0.72
+    },
+    {
+      "topic": "SOC 2 security audit",
+      "detail": "preparing for a SOC 2 Type II audit, tightening access controls",
+      "source_url": "https://security-notes.example/revel8-synthetic/soc2",
+      "date": "2026-11-12",
+      "confidence": 0.66
+    },
+    {
+      "topic": "backend engineering talk",
+      "detail": "giving a talk on event-driven backends at a Munich dev meetup",
+      "source_url": "https://munich-dev-meetup.example/talks/event-driven",
+      "date": "2026-10-22",
+      "confidence": 0.58
+    }
+  ],
+  "senders": [
+    {
+      "name": "Daniel Krause",
+      "address": "d.krause@cloudonboarding-eu.example",
+      "rationale": "migration onboarding engineer, credible during the cloud move"
+    },
+    {
+      "name": "Petra Lang",
+      "address": "p.lang@trustaudit-soc.example",
+      "rationale": "external auditor contact, plausible during SOC 2 prep"
+    }
+  ],
+  "vendors": [
+    {
+      "name": "GitHub",
+      "login_url": "https://github-enterprise-sso.example/login"
+    },
+    {
+      "name": "Datadog",
+      "login_url": "https://datadog-observe-login.example/sso"
+    }
+  ]
+}

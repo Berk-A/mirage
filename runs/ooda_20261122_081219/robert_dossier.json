@@ -1,0 +1,324 @@
+{
+  "target_id": "robert",
+  "display_name": "Robert Seilbeck",
+  "role": "Co-Founder & CTO, revel8",
+  "archetype": "technical_leader",
+  "hooks": [
+    {
+      "topic": "ISO 27001 certification",
+      "detail": "revel8 maintains ISO 27001 certification (an audit/compliance surface).",
+      "source_url": "confirmed:live-recon",
+      "date": "2026-11-22",
+      "confidence": 0.85
+    },
+    {
+      "topic": "Allianz",
+      "detail": "Allianz is a revel8 enterprise customer (public contact-center case).",
+      "source_url": "confirmed:live-recon",
+      "date": "2026-11-22",
+      "confidence": 0.8
+    }
+  ],
+  "senders": [
+    {
+      "name": "Julius Muth",
+      "address": "julius.muth@revel8-team.de",
+      "rationale": "Robert Seilbeck and Julius Muth both work at revel8."
+    },
+    {
+      "name": "Tom Müller",
+      "address": "tom.mueller@revel8-team.de",
+      "rationale": "Robert Seilbeck and Tom Müller both work at revel8."
+    }
+  ],
+  "vendors": [
+    {
+      "name": "STACKIT",
+      "login_url": "https://stackit.cloud"
+    },
+    {
+      "name": "GitHub",
+      "login_url": "https://github.com"
+    }
+  ],
+  "facts": [
+    {
+      "predicate": "role_is",
+      "value": "CTO",
+      "claim": "Robert Seilbeck is CTO.",
+      "source_url": "https://de.linkedin.com/in/robert-seilbeck-a4789882",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.7
+    },
+    {
+      "predicate": "works_at",
+      "value": "revel8",
+      "claim": "Robert Seilbeck works at revel8.",
+      "source_url": "https://de.linkedin.com/in/robert-seilbeck-a4789882",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-10-27",
+      "confidence": 0.7
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "the company's growth",
+      "claim": "Robert Seilbeck and revel8 were covered by de.linkedin.com: \"revel8\".",
+      "source_url": "https://de.linkedin.com/company/revel8ai",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their recent talk or interview",
+      "claim": "Robert Seilbeck and revel8 were covered by www.revel8.ai: \"Robert Seilbeck — CTO | revel8\".",
+      "source_url": "https://www.revel8.ai/author-robert",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "the recent funding round",
+      "claim": "revel8 raised €5.7 million.",
+      "source_url": "https://www.revel8.ai/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-26",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "STACKIT",
+      "claim": "revel8 runs its production infrastructure on STACKIT (German sovereign cloud).",
+      "source_url": "https://www.revel8.ai/",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-22",
+      "confidence": 0.9
+    },
+    {
+      "predicate": "colleague_of",
+      "value": "Julius Muth",
+      "claim": "Robert Seilbeck and Julius Muth both work at revel8.",
+      "source_url": "https://www.menlotimes.com/post/revel8-levels-up-its-fight-against-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-10-27",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "colleague_of",
+      "value": "Tom Müller",
+      "claim": "Robert Seilbeck and Tom Müller both work at revel8.",
+      "source_url": "https://www.menlotimes.com/post/revel8-levels-up-its-fight-against-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-10-27",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Merantix Capital",
+      "claim": "revel8 is backed by Merantix Capital.",
+      "source_url": "https://www.menlotimes.com/post/revel8-levels-up-its-fight-against-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-26",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Y Combinator",
+      "claim": "revel8 is backed by Y Combinator.",
+      "source_url": "https://www.menlotimes.com/post/revel8-levels-up-its-fight-against-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-26",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Fortino Capital",
+      "claim": "revel8 is backed by Fortino Capital.",
+      "source_url": "https://www.menlotimes.com/post/revel8-levels-up-its-fight-against-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-26",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "works_on",
+      "value": "Revel8",
+      "claim": "Robert Seilbeck is leading Revel8, a Berlin-based cybersecurity startup.",
+      "source_url": "https://www.menlotimes.com/post/revel8-levels-up-its-fight-against-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-26",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "secured_funding",
+      "value": "€5.7 million seed round led by Peak",
+      "claim": "Revel8 secured a €5.7 million seed round led by Peak.",
+      "source_url": "https://www.menlotimes.com/post/revel8-levels-up-its-fight-against-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-26",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "works_for",
+      "value": "revel8",
+      "claim": "Robert Seilbeck is the Co-Founder & CTO of revel8.",
+      "source_url": "https://tech.eu/2025/09/25/revel8-nets-eur7-million-to-fight-ai-powered-cyberattacks/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "raised_funding",
+      "value": "€7 million",
+      "claim": "revel8 has raised a €7 million funding round.",
+      "source_url": "https://tech.eu/2025/09/25/revel8-nets-eur7-million-to-fight-ai-powered-cyberattacks/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "partnered_with",
+      "value": "Peak, Fortino Capital, Merantix Capital, and angels including Mario Götze, Sergej Epp, Michael Schrank, Rogier Fischer, and Alexander Rinke",
+      "claim": "The funding round was led by Peak with participation from other investors.",
+      "source_url": "https://tech.eu/2025/09/25/revel8-nets-eur7-million-to-fight-ai-powered-cyberattacks/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "the recent product launch",
+      "claim": "Robert Seilbeck and revel8 were covered by www.revel8.ai: \"revel8 Now Live on the STACKIT Marketplace\".",
+      "source_url": "https://www.revel8.ai/blog/revel8-is-now-live-on-the-stackit-marketplace---cybersecurity-awareness-built-for-europe",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "works_on",
+      "value": "a modern platform that protects enterprises against AI-powered attacks",
+      "claim": "Robert Seilbeck is building a modern platform that protects enterprises against AI-powered attacks",
+      "source_url": "https://revel8-f04e95.webflow.io/about",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "said",
+      "value": "revel8 is now listed in the STACKIT Marketplace",
+      "claim": "Robert Seilbeck announced that revel8 is now listed in the STACKIT Marketplace",
+      "source_url": "https://www.revel8.ai/blog/revel8-is-now-live-on-the-stackit-marketplace---cybersecurity-awareness-built-for-europe",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "role_in_company",
+      "value": "Co-Founder & CTO",
+      "claim": "Robert Seilbeck's role at revel8 is Co-Founder & CTO.",
+      "source_url": "https://www.startbase.com/news/revel8-mit-7-millionen-euro-seed-gegen-zur-abwehr-von-ki-cyberangriffen-erfolgreich/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "worked_at",
+      "value": "Celonis",
+      "claim": "Robert Seilbeck previously worked at Celonis.",
+      "source_url": "https://www.startbase.com/news/revel8-mit-7-millionen-euro-seed-gegen-zur-abwehr-von-ki-cyberangriffen-erfolgreich/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "founded_by",
+      "value": "Julius Muth, Tom Müller, and Robert Seilbeck",
+      "claim": "Revel8 was launched in 2023 by Julius Muth, Tom Müller, and Robert Seilbeck.",
+      "source_url": "https://www.vestbee.com/insights/articles/revel8-secures-7-m",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "works_as",
+      "value": "Co-Founder & CTO of revel8",
+      "claim": "Robert Seilbeck is the Co-Founder & CTO of revel8.",
+      "source_url": "https://www.g2.com/products/revel8/reviews",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-10-27",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "founded_company_with",
+      "value": "Julius Muth, Tom Müller",
+      "claim": "revel8 was founded in 2024 by Robert Seilbeck along with Julius Muth and Tom Müller.",
+      "source_url": "https://www.g2.com/products/revel8/reviews",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-10-27",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Stack Overflow",
+      "claim": "Robert Seilbeck is active on Stack Overflow (https://stackoverflow.com/users/filter?search=rseilbeck).",
+      "source_url": "https://stackoverflow.com/users/filter?search=rseilbeck",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on X",
+      "claim": "Robert Seilbeck is active on X (https://twitter.com/rseilbeck).",
+      "source_url": "https://twitter.com/rseilbeck",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "GitHub",
+      "claim": "Robert Seilbeck has a GitHub account (under a handle they would use).",
+      "source_url": "https://github.com/rseilbeck",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Facebook",
+      "claim": "Robert Seilbeck is active on Facebook (https://www.facebook.com/robertseilbeck).",
+      "source_url": "https://www.facebook.com/robertseilbeck",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "works_on",
+      "value": "ISO 27001 certification",
+      "claim": "revel8 maintains ISO 27001 certification (an audit/compliance surface).",
+      "source_url": "confirmed:live-recon",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-22",
+      "confidence": 0.85
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "Allianz",
+      "claim": "Allianz is a revel8 enterprise customer (public contact-center case).",
+      "source_url": "confirmed:live-recon",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-22",
+      "confidence": 0.8
+    }
+  ],
+  "gaps": [
+    "no verified event participation in the last 365 days",
+    "no verified future event schedule"
+  ],
+  "as_of": "2026-11-22",
+  "diagnostics": {
+    "collection_warnings": []
+  }
+}
