@@ -193,17 +193,27 @@ def test_event_attendance_requires_explicit_statement_and_event_date():
 
     attended = RawDoc(
         url="https://news.example/panel", title="Julius Muth spoke at Cyber Summit",
-        text="Julius Muth spoke at Cyber Summit on 2026-10-01.",
+        text="revel8's Julius Muth spoke at Cyber Summit on 2026-10-01.",
         published_date="2026-10-10",
     )
     event = next(f for f in extract(attended, seed) if f.predicate == "spoke_at")
     assert event.event_date == "2026-10-01"
 
+    # Provenance: a namesake page that names the person but NOT the company yields no event
+    # fact (stops a different 'Julius Muth' on a conference roster being attributed here).
+    namesake = RawDoc(
+        url="https://roster.example/speakers", title="Julius Muth keynote",
+        text="Julius Muth will keynote the Apologetics Summit on 2026-11-01.",
+        published_date="2026-10-10",
+    )
+    assert not [f for f in extract(namesake, seed)
+                if f.predicate in {"spoke_at", "scheduled_for", "attended_event", "engaged_with"}]
+
 
 def test_future_event_requires_a_future_date_and_schedule_language():
     scheduled = RawDoc(
         url="https://events.example/summit", title="Julius Muth will speak at Cyber Summit",
-        text="Julius Muth will speak at Cyber Summit on 2099-03-01.",
+        text="revel8's Julius Muth will speak at Cyber Summit on 2099-03-01.",
         published_date="2026-10-10",
     )
     event = next(f for f in extract(scheduled, _seed())

@@ -192,14 +192,17 @@ def _extract_web(doc: RawDoc, seed: Seed) -> list[Fact]:
     if not (about_target or about_company):
         return facts  # page isn't about the target or their company — extract nothing
 
-    if about_target:
+    # Person-specific claims (role, colleagues, events) need COMPANY corroboration, not just the
+    # name — a namesake page (a different 'Robert Seilbeck' on a keynote roster or events page)
+    # mentions the person but never the company, and must not have its facts attributed here.
+    about_person = about_target and about_company
+    if about_person:
         role = _find_role(doc.text, seed)
         if role:
             facts.append(_fact(seed, "role_is", role, doc,
                                claim=f"{name} is {role}.", confidence=0.7))
-        if about_company:
-            facts.append(_fact(seed, "works_at", seed.company, doc,
-                               claim=f"{name} works at {seed.company}.", confidence=0.7))
+        facts.append(_fact(seed, "works_at", seed.company, doc,
+                           claim=f"{name} works at {seed.company}.", confidence=0.7))
 
         # Colleagues co-mentioned here → the most credible senders.
         for colleague in _colleagues_in(low, seed):
@@ -207,14 +210,15 @@ def _extract_web(doc: RawDoc, seed: Seed) -> list[Fact]:
                                claim=f"{name} and {colleague} both work at {seed.company or 'the same company'}.",
                                confidence=0.6))
 
-    # main-side: structured event facts (talks, launches, coverage).
-    if about_target or about_company:
+    # Event / talk / launch / coverage hooks are the most namesake-prone (speaker rosters,
+    # conference pages), so they require the company to be named, not just the person.
+    if about_company:
         facts.extend(_extract_event_facts(doc, seed))
 
     # Recent coverage / talk / launch → a clean hook. A publish date makes it a dated
     # (recency-ranked) hook; without one we still surface strong event classes, undated.
     topic = _event_class_topic(doc.title or "") or _event_class_topic(doc.text)
-    if topic and (about_target or about_company):
+    if topic and about_company:
         host = _host(doc.url)
         headline = (doc.title or "").strip()
         when = f"On {doc.published_date}, " if doc.published_date else ""
@@ -232,6 +236,20 @@ def _extract_web(doc: RawDoc, seed: Seed) -> list[Fact]:
     return facts
 
 
+# Section/nav titles that masquerade as an "event name" when a page title is a bare label
+# (e.g. an aggregator's "Events" listing). Never a real, specific event.
+_GENERIC_EVENT_LABELS = frozenset({
+    "events", "event", "home", "news", "about", "blog", "press", "media", "speakers",
+    "speaker", "agenda", "schedule", "conference", "conferences", "webinar", "webinars",
+    "talks", "talk", "contact", "team", "login", "sign in", "newsletter", "resources",
+    "calendar", "upcoming events", "past events", "all events",
+})
+
+
+def _is_generic_label(name: str) -> bool:
+    return re.sub(r"[^a-z0-9 ]", "", name.lower()).strip() in _GENERIC_EVENT_LABELS
+
+
 def _extract_event_facts(doc: RawDoc, seed: Seed) -> list[Fact]:
     """Extract only explicit dated attendance or scheduled-event statements.
 
@@ -240,6 +258,8 @@ def _extract_event_facts(doc: RawDoc, seed: Seed) -> list[Fact]:
     """
     text = f"{doc.title}. {doc.text}"
     low = text.casefold()
+    if not _mentions_target(low, seed):
+        return []   # provenance gate: the event page isn't about this person -> no fact
     scheduled = re.search(
         r"\b(?:will speak|will be speaking|will present|will attend|will join|"
         r"scheduled to speak|scheduled as a speaker|will be a speaker)\b", low
@@ -269,8 +289,8 @@ def _extract_event_facts(doc: RawDoc, seed: Seed) -> list[Fact]:
         return []
 
     event_name = _SITE_SUFFIX.sub("", (doc.title or "").strip()).strip(" -–|.")
-    if not event_name:
-        return []
+    if not event_name or _is_generic_label(event_name):
+        return []   # a nav/section title ("Events", "News") is not a real event name
     host = _host(doc.url)
     claim = (f"The source {host} says {seed.name} {claim_verb} "
              f'"{event_name}" on {event_date}.')
