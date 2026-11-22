@@ -181,6 +181,11 @@ _VERBAL_REFUSAL = (
     "will not give", "won't confirm", "will not confirm", "won't correct",
     "not going to", "no thanks", "not interested", "i'll pass", "i will pass",
     "rather not", "decline", "won't do", "will not do",
+    # Refusing the core transaction itself (the registration/portal ask is our win path):
+    # a "no" to registering is a hard refusal, not a probe, even when wrapped in a question.
+    "won't register", "will not register", "won't be registering", "won't sign up",
+    "will not sign up", "won't give out", "will not give out", "won't be signing",
+    "not registering", "not signing up", "won't create an account", "no portal",
 )
 # A fence is a SCOPED refusal: willing to talk, unwilling to cross this line.
 _FENCE_PHRASES = (
@@ -233,9 +238,11 @@ def classify_intent(reply_text: str) -> str:
         return ""
     questions = text.count("?")
     if _any(text, _VERBAL_REFUSAL):
-        # "I won't open attachments / I won't go into internals" is a fence when the rest
-        # of the reply keeps engaging, a refusal when it's the whole answer.
-        if _any(text, _FENCE_PHRASES) or "but" in text or questions:
+        # A FENCE is a SCOPED no that still offers a way forward ("not by mail, but send X").
+        # A bare question is a GATE the target sets ("who referred you?"), not willingness to
+        # proceed, so it must NOT soften a hard refusal into a fence — otherwise the agent
+        # reads "I won't register" as negotiable and re-sends the same ask (the Robert loop).
+        if _any(text, _FENCE_PHRASES) or " but " in text or "however" in text:
             return "scope_fence"
         return "refusal"
     if _any(text, _FENCE_PHRASES):

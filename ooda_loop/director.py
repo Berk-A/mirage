@@ -28,6 +28,7 @@ from core.models import (
 from ooda_loop.decider import ASYNC_SILENT_CHANNELS, Decider
 from ooda_loop.ledger import STRATEGIES, STRATEGY_KEYS
 from ooda_loop.pretext import world_for
+from ooda_loop.reader import classify_intent
 from ooda_loop.state import Decision, LoopState
 
 _OBJECTIVES = {o.value: o for o in Objective}
@@ -104,8 +105,15 @@ DIRECTOR_SYSTEM = (
     "  scope_fence — a stated boundary: respect it explicitly, keep the business step as the "
     "easy path; if the fence blocks mail, a phone_call/live_chat (1 touch, 10 turns) is the "
     "trust accelerator.\n"
-    "  compliance / deferral — short warm nudge with the deadline and the link; no new info.\n"
-    "  refusal — do not push; change strategy or channel, or close gracefully.\n\n"
+    "  compliance — they say it is done: thank them; if no event confirms it, make finishing "
+    "frictionless (the direct link, 'takes two minutes').\n"
+    "  deferral — they are WILLING but deferring ('I'll do it Monday'): this is the final mile, "
+    "do not just wait. Make acting NOW easier than acting later — the direct 2-minute link, the "
+    "approaching Q&A/deadline as the reason not to wait, and an offer to walk them through it "
+    "live (a phone_call/live_chat is one touch). Add NO new facts; reduce friction, don't re-pitch.\n"
+    "  refusal — they said no to THIS play. Do NOT re-send the same ask (that is the loop that "
+    "burns the budget): switch the transaction FAMILY (a different world/pretext) or the channel, "
+    "or close gracefully. One more identical registration email is always wrong here.\n\n"
     "TRANSACTION DOCTRINE — the strongest known play: offer a business transaction the "
     "target's OWN role must process (an RFP to a seller, a design partnership to a product "
     "lead, a technical evaluation to a CTO), where the ask (register on the portal) is the "
@@ -284,18 +292,28 @@ class ModelDirector:
     def _session_world(state: LoopState, dossier: Dossier):
         """The session's pretext world, shared by the prompt builder and the move so the
         model reasons about the SAME world it will be sent as. An explicitly attached world
-        wins; otherwise the transaction FAMILY pivots when the current world draws only
-        silence (ACTION_SEQUENCE §T2): while the target has NEVER replied, step to a
-        different family every 2 silent touches; the moment any world earns a reply the
-        pivot freezes on the family that worked, so a converting thread is never abandoned
-        (a single silent world no longer dooms a target)."""
+        wins; otherwise the transaction FAMILY pivots when the current world isn't landing
+        (ACTION_SEQUENCE §T2): a refusal or a hard fence counts as NOT landing, exactly like
+        silence, so step to a different family every 2 such touches. The pivot freezes only
+        on POSITIVE engagement (a reply that isn't a wall) — because a target who says 'I
+        won't register on a portal' has NOT validated this world; re-sending it is the Robert
+        loop. A single silent OR refused world no longer dooms a target."""
         attached = Decider._world(dossier)
         if attached is not None:
             return attached
-        if not any((r or "") not in ("", "(silence)") for _, _, r in state.thread):
+
+        def _is_wall(reply: str) -> bool:
+            # Silence, a hard refusal, or a scope-fence: this world did not land.
+            r = reply or ""
+            return r in ("", "(silence)") or classify_intent(r) in ("refusal", "scope_fence")
+
+        engaged_positively = any(
+            not _is_wall(r) for _, _, r in state.thread
+        )
+        if not engaged_positively:
             streak = 0
             for _, _, r in reversed(state.thread):
-                if (r or "") in ("", "(silence)"):
+                if _is_wall(r):
                     streak += 1
                 else:
                     break
