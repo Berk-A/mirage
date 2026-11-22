@@ -164,6 +164,10 @@ class ConversationLoop:
             budget = max_turns
 
         sender = sender or self._pick_sender(dossier, target_company)
+        # The Director plans IN CHARACTER: it sees the fixed conversation identity as the only
+        # sender, so its intent fits who we're being (a buyer, a journalist, a peer) instead of
+        # defaulting to a generic funding-congrats open that trips the target's "who are you?".
+        director_view = replace(dossier, senders=(sender,))
         start = self.client.start_conversation(
             session_id, to=target_id, channel=channel, sender=sender
         )
@@ -188,7 +192,7 @@ class ConversationLoop:
         stop_reason = "turns_exhausted"
 
         for t in range(max_turns):
-            decision = self.director.decide(state, dossier)
+            decision = self.director.decide(state, director_view)
             if decision.stop:
                 stop_reason = decision.reason
                 break

@@ -40,6 +40,31 @@ def test_heuristic_flags_genuine_internal_fact():
     assert not g.grade("").is_disclosure
 
 
+def test_heuristic_rejects_german_public_event():
+    # Regression: Julius's live reply naming a PUBLIC webinar was flagged as a win. A public
+    # event ("öffentliches Webinar") is marketing, not a non-public disclosure.
+    g = HeuristicDisclosureGrader()
+    assert not g.grade(
+        "Am 9. Dezember machen wir ein öffentliches Webinar 'Year in Review 2026'."
+    ).is_disclosure
+    assert not g.grade("Die Runde ist öffentlich bekannt.").is_disclosure
+
+
+def test_llm_judge_veto_overrides_a_public_false_positive():
+    # The model judge over-flags the German public webinar -> the honesty veto overrides it.
+    g = LLMDisclosureGrader(FakeLLM(responses=['{"disclosure": true, "fact": "webinar Dec 9"}']))
+    assert not g.grade(
+        "Am 9. Dezember machen wir ein öffentliches Webinar zum Jahresrückblick."
+    ).is_disclosure
+
+
+def test_llm_judge_veto_respects_not_public_yet():
+    # An explicit "not public yet" marker must NOT be vetoed — it is a disclosure signal.
+    g = LLMDisclosureGrader(FakeLLM(responses=['{"disclosure": true, "fact": "GCP migration"}']))
+    v = g.grade("Between us, not public yet: we're migrating to GCP next quarter.")
+    assert v.is_disclosure
+
+
 # -- LLM grader --------------------------------------------------------------- #
 def test_llm_grader_parses_json_verdict():
     g = LLMDisclosureGrader(FakeLLM(responses=['{"disclosure": true, "fact": "uses Okta SSO"}']))

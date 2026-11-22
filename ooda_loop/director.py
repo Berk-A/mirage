@@ -29,6 +29,22 @@ from ooda_loop.state import Decision, LoopState
 
 _OBJECTIVES = {o.value: o for o in Objective}
 _TACTICS = {t.value: t for t in ElicitationTactic}
+
+# Public / common-knowledge markers. A hook about the funding round, investors, or the public
+# mission is NOT a lever: the target knows it is public, so opening by reciting it reads as cold
+# spam and triggers an identity check ("that's public, who are you?"). These facts have high
+# source-confidence but near-zero persuasive leverage — the two must not be conflated.
+_PUBLIC_HOOK_MARKERS = (
+    "funding", "investor", "raised", "raise of", "backed by", "million", "€", "seed round",
+    "venture capital", "valuation", "mission", "press release", "funding round",
+)
+
+
+def _is_public_hook(hook) -> bool:
+    """True when a hook is public/common-knowledge (funding/investors/mission) — strategically
+    weak as a conversational opener however high its source-confidence."""
+    text = f"{getattr(hook, 'topic', '')} {getattr(hook, 'detail', '') or ''}".lower()
+    return any(m in text for m in _PUBLIC_HOOK_MARKERS)
 _CHANNELS = {
     "slack", "whatsapp", "sms", "telegram", "signal", "imessage", "teams_chat",
     "linkedin_message", "x_dm", "facebook_messenger", "discord", "instagram_dm",
@@ -53,7 +69,10 @@ DIRECTOR_SYSTEM = (
     "conversation or claim they said something. Use the gathered intel to be specific and "
     "credible. Build rapport before asking. If they're wary or probing, de-escalate — do not "
     "push the ask. Interactive channels (slack, whatsapp, ...) engage a stranger; email/async "
-    "usually stay silent cold. Restating public info is NOT a win.\n\n"
+    "usually stay silent cold. Restating public info is NOT a win — and OPENING with public "
+    "info (their funding round, investors, mission) is counter-productive: it reads as cold "
+    "spam and triggers an identity check before any rapport. Lead with a reason to talk that "
+    "fits who you are, not with a fact they know is public.\n\n"
     "Respond with ONLY a JSON object (no prose, no code fence), keys:\n"
     "  reasoning: 1-2 sentences — your read of the target and why this move now.\n"
     "  objective: disclosure | action | credentials\n"
@@ -109,12 +128,23 @@ class ModelDirector:
 
     def _prompt(self, state: LoopState, dossier: Dossier) -> str:
         ranked = sorted(dossier.hooks, key=lambda h: h.confidence, reverse=True)
-        strong = [h for h in ranked if h.confidence >= 0.5][:6]
-        weak = [h for h in ranked if h.confidence < 0.5][:6]
-        thin = len(strong) < 2   # not enough sharp, specific intel to run a tailored pretext
-        hooks = "GROUNDED hooks — anchor the pretext on one of these (real, sourced):\n" + (
+        public = [h for h in ranked if _is_public_hook(h)]
+        # A STRONG hook is a privileged, specific, person-level lever — NOT a public fact. High
+        # source-confidence on a public fact (the funding round) is not leverage: it has never
+        # worked as an opener because the target knows it's public. So public hooks never count
+        # toward "rich" research, and research is THIN whenever no privileged lever exists.
+        strong = [h for h in ranked if h.confidence >= 0.5 and not _is_public_hook(h)][:6]
+        weak = [h for h in ranked if h.confidence < 0.5 and not _is_public_hook(h)][:6]
+        thin = len(strong) < 1   # no privileged lever -> run a standard, universal approach
+        hooks = "PRIVILEGED hooks — specific, non-public levers to anchor the pretext on:\n" + (
             "\n".join(f"  - {h.topic}: {(h.detail or h.topic)[:120]}" for h in strong)
             or "  (none)")
+        if public:
+            hooks += ("\nPUBLIC / common-knowledge (funding round, investors, public mission) — "
+                      "the target KNOWS these are public; opening by reciting them reads as cold "
+                      "spam and triggers 'that's public, who are you?'. NEVER open with these or "
+                      "build the pretext on them — at most a light aside once rapport exists:\n"
+                      + "\n".join(f"  - {h.topic}" for h in public[:5]))
         if weak:
             hooks += ("\nWEAK signals — unverified handle/social matches that may be the WRONG "
                       "person; use at most as light small-talk, NEVER as the core pretext and "
@@ -199,8 +229,12 @@ class ModelDirector:
         intent = str(plan.get("intent", "")).strip()
         ask = intent or self._default_ask(obj, hook)
 
+        # A PUBLIC hook (funding/investors/mission) must NEVER become a spoken claim: reciting
+        # it is precisely the move that has never worked (the target knows it's public and it
+        # triggers an identity check). Only a privileged, non-public hook is stated as fact;
+        # otherwise we assert nothing and lean on the pretext/lever instead.
         claims: tuple[Claim, ...] = ()
-        if hook is not None:
+        if hook is not None and not _is_public_hook(hook):
             claims = (Claim(text=hook.detail or hook.topic),)
 
         subject = url = attachment = None

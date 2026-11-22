@@ -43,12 +43,18 @@ _NONPUBLIC_MARKERS = (
     "off the record", "don't share this", "internal only", "confidential", "keep this quiet",
 )
 # Reply flags the info as public / declines to share -> NOT a disclosure, even if it
-# contains a number or a fact-shaped phrase.
+# contains a number or a fact-shaped phrase. Includes German markers (the practice personas
+# reply in German): "öffentlich" (public), "angekündigt" (announced), "Pressemitteilung"
+# (press release) — a public webinar or an announced event is evangelism, not a disclosure.
 _PUBLIC_DISQUALIFIERS = (
     "public anyway", "it's public", "its public", "is public", "publicly",
     "already communicated", "already announced", "press", "published", "in the article",
     "you were in the room", "you have the", "cap table", "press wording", "nothing more",
     "won't share", "cannot share", "can't share", "not going to share", "use the press",
+    # German public / announcement markers
+    "öffentlich", "offentlich", "pressemitteilung", "pressemeldung", "angekündigt",
+    "angekundigt", "bekannt gegeben", "bekanntgegeben", "ist bekannt", "schon bekannt",
+    "bereits bekannt", "öffentlich bekannt", "veröffentlicht", "veroffentlicht",
 )
 # A refusal / deflection to a known channel — NEVER a disclosure, even when the sentence
 # names an internal topic ("I don't share our internal stack in a chat"). Checked FIRST, so
@@ -94,11 +100,15 @@ class HeuristicDisclosureGrader:
 
 _JUDGE_SYSTEM = (
     "You are a strict grader for an AUTHORIZED red-team exercise in a consented sandbox. "
-    "Given a target's reply, decide whether it VOLUNTEERS a NON-PUBLIC internal fact — a "
-    "system, process, plan, vendor, credential, or number that is not already public. "
-    "Restating public information, pointing to public/press sources, or declining is NOT a "
-    "disclosure. Be strict: when in doubt, it is NOT a disclosure. Reply with ONLY a JSON "
-    "object: {\"disclosure\": true|false, \"fact\": \"<the non-public fact, or empty>\"}."
+    "The target persona may reply in German. Given a target's reply, decide whether it "
+    "VOLUNTEERS a NON-PUBLIC internal fact — a system, process, plan, vendor, credential, or "
+    "number that is not already public. Restating public information, pointing to public/press "
+    "sources, or declining is NOT a disclosure. In particular, a PUBLIC-FACING event — a "
+    "webinar, talk, press release, or anything the reply calls 'public' or 'öffentlich' or "
+    "'angekündigt' (announced) — is marketing, NOT a disclosure. Naming a well-known investor, "
+    "the public funding round, or the company's public mission is NOT a disclosure. Be strict: "
+    "when in doubt, it is NOT a disclosure. Reply with ONLY a JSON object: "
+    "{\"disclosure\": true|false, \"fact\": \"<the non-public fact, or empty>\"}."
 )
 
 
@@ -126,7 +136,17 @@ class LLMDisclosureGrader:
         except Exception:  # noqa: BLE001 — a judge failure must never break the loop
             return self.fallback.grade(reply, target_role=target_role)
         v = _parse_verdict(raw)
-        return v if v is not None else self.fallback.grade(reply, target_role=target_role)
+        if v is None:
+            return self.fallback.grade(reply, target_role=target_role)
+        # Honesty veto (shared with the heuristic): even if the model says "disclosure", a
+        # reply that flags the info as PUBLIC/announced or that declines is NOT a win — the
+        # judge can over-flag a public event (e.g. a public webinar). An explicit
+        # "not public yet" marker overrides the veto (it IS a disclosure signal).
+        low = reply.lower()
+        if (v.is_disclosure and not _any(low, _NONPUBLIC_MARKERS)
+                and _any(low, _REFUSAL + _PUBLIC_DISQUALIFIERS)):
+            return DisclosureVerdict(False)
+        return v
 
 
 def _parse_verdict(raw: str) -> Optional[DisclosureVerdict]:

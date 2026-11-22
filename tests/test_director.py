@@ -113,11 +113,39 @@ def test_director_thin_research_switches_to_universal_mode():
     assert m.sender.name == "IT Service Desk"       # a proposed generic identity, used name-only
 
 
-def test_director_rich_research_anchors_on_hooks():
-    rich = Dossier(target_id="x", display_name="X", role="CEO",
-                   hooks=(Hook("their investor Merantix", "backed by Merantix", confidence=0.55),
-                          Hook("the recent funding round", "raised 7M", confidence=0.55)),
-                   senders=(Sender("Julius Muth", "julius@revel8-team.de"),))
+def test_director_public_hooks_are_thin_not_rich():
+    # The core rethink: funding/investor hooks are PUBLIC — high source-confidence, zero
+    # leverage. They must NOT count as rich research (reciting them has never worked); the
+    # Director treats this as THIN and must flag them as public-don't-open context.
+    public = Dossier(target_id="x", display_name="X", role="CEO",
+                     hooks=(Hook("their investor Merantix", "backed by Merantix", confidence=0.55),
+                            Hook("the recent funding round", "raised 7M", confidence=0.55)),
+                     senders=(Sender("Julius Muth", "julius@revel8-team.de"),))
     llm = FakeLLM(responses=[_plan()])
+    ModelDirector(llm).decide(LoopState(dossier=public, session_id="s", budget=10), public)
+    user = llm.calls[0][1]["content"]
+    assert "RESEARCH IS THIN" in user
+    assert "PUBLIC" in user and "NEVER open with these" in user
+
+
+def test_director_never_recites_a_public_hook_as_a_claim():
+    # The €7M problem: a public funding/investor hook must never be passed to the Writer as a
+    # spoken fact (the Writer recites only CLAIMS), so it can't leak into the message.
+    public = Dossier(target_id="x", display_name="X", role="CEO",
+                     hooks=(Hook("the recent funding round", "raised €7 million", confidence=0.6),),
+                     senders=(Sender("Jonas Brandt", "jonas@brandt-labs.dev"),))
+    llm = FakeLLM(responses=[_plan(hook="the recent funding round")])
+    m = ModelDirector(llm).decide(LoopState(dossier=public, session_id="s", budget=10), public).move
+    assert m.claims == ()                               # no public fact is ever recited
+    joined = " ".join(c.text for c in m.claims)
+    assert "7" not in joined and "million" not in joined.lower()
+
+
+def test_director_rich_research_anchors_on_a_privileged_hook():
+    rich = Dossier(target_id="x", display_name="X", role="CEO",
+                   hooks=(Hook("their GCP migration", "moving infra to GCP, not announced yet",
+                               confidence=0.7),),
+                   senders=(Sender("Jonas Brandt", "jonas@brandt-labs.dev"),))
+    llm = FakeLLM(responses=[_plan(hook="their GCP migration")])
     ModelDirector(llm).decide(LoopState(dossier=rich, session_id="s", budget=10), rich)
     assert "RESEARCH IS RICH" in llm.calls[0][1]["content"]

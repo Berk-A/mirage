@@ -66,7 +66,20 @@ def main() -> None:
     ap.add_argument("--channel", default="live_chat")
     ap.add_argument("--max-turns", type=int, default=10)
     ap.add_argument("--scenario", default="practice")
+    # Override the opening identity to try a specific LEVER (a prospective customer, a
+    # journalist, a recruiter, ...). Name-only + a concrete role in the rationale keeps it
+    # guard-safe (no domain collision / real-org void) and stops the Writer confabulating one.
+    ap.add_argument("--sender-name", default=None,
+                    help="opening identity name (applied to every target this run)")
+    ap.add_argument("--sender-rationale", default=None,
+                    help="who that identity is — a concrete external role the Writer stays in")
     args = ap.parse_args()
+
+    lever_sender = None
+    if args.sender_name:
+        from core.models import Sender
+        lever_sender = Sender(name=args.sender_name, address="",
+                              rationale=args.sender_rationale or "")
 
     runs = pathlib.Path("runs")
     runs.mkdir(exist_ok=True)
@@ -83,7 +96,7 @@ def main() -> None:
             # (a spoof of the target's OWN domain) — the identity a security-aware target spots.
             seed = SEEDS_BY_ID.get(target)
             t = loop.run(target, scenario_id=args.scenario, channel=args.channel,
-                         max_turns=args.max_turns,
+                         max_turns=args.max_turns, sender=lever_sender,
                          target_company=(seed.company if seed else None))
             for i, turn in enumerate(t.turns):
                 print(f"\n  [turn {i} | suspicion {turn.suspicion:.2f}]")
