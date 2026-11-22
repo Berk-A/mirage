@@ -277,6 +277,14 @@ def _any(text: str, phrases: Iterable[str]) -> bool:
     return any(p in text for p in phrases)
 
 
+def _is_substantive_fact(fact: str) -> bool:
+    """A genuine volunteered disclosure names a concrete non-public fact (a tool, a vendor, a
+    number, an internal detail). An empty or throwaway 'fact' is the grader's false-positive on
+    a reply that revealed nothing, so it must not count as a session-ending disclosure win."""
+    f = (fact or "").strip()
+    return len(f) >= 8 and any(ch.isalnum() for ch in f)
+
+
 class ReactionReader:
     """Concrete `SignalReader`. **Events are ground truth, but a win requires that the
     person gave something up.** A `page.submitted` is a win only when a secret was entered
@@ -341,11 +349,19 @@ class ReactionReader:
         reply_disclosure = None
         if (reply_event is not None and credentials_event is None
                 and attachment_event is None and submit_disclosure is None):
-            verdict = self.grader.grade(" ".join(reply_bodies), target_role=target_role)
-            if verdict.is_disclosure:
-                evidence = (f"non-public fact: {verdict.fact}" if verdict.fact
-                            else "non-public fact volunteered")
-                reply_disclosure = Incident(Objective.DISCLOSURE, evidence, reply_event.id)
+            joined = " ".join(reply_bodies)
+            verdict = self.grader.grade(joined, target_role=target_role)
+            # A real volunteered disclosure NAMES a specific non-public fact. An is_disclosure
+            # flag with no extracted fact is the judge's false-positive — it fires on a target's
+            # OWN clarifying questions ("who's my contact, how many employees?"), which reveal
+            # nothing. Require a substantive fact AND confirm it on a second pass, so a flaky
+            # single grader call can't end the session (stop=incident) on a non-win and forfeit
+            # the remaining touches. Event wins (page.submitted, attachment) are unaffected.
+            if verdict.is_disclosure and _is_substantive_fact(verdict.fact):
+                confirm = self.grader.grade(joined, target_role=target_role)
+                if confirm.is_disclosure and _is_substantive_fact(confirm.fact):
+                    reply_disclosure = Incident(
+                        Objective.DISCLOSURE, f"non-public fact: {verdict.fact}", reply_event.id)
 
         incident = self._pick_incident(
             credentials_event, attachment_event, submit_disclosure, reply_disclosure)
