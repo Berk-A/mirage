@@ -248,47 +248,40 @@ class ModelDirector:
         if not state.thread and channel in ASYNC_SILENT_CHANNELS:
             channel = fb._pick_open_channel(state)
 
-        sender = self._pick_sender(dossier, plan.get("sender"))
-        hook = self._pick_hook(dossier, plan.get("hook"))
         tactic = _TACTICS.get(str(plan.get("tactic", "")).lower().strip())
         if tactic is None:
             tactic = ElicitationTactic(fb._pick_tactic(obj, fb._engagement_state(state)))
-
         intent = str(plan.get("intent", "")).strip()
-        ask = intent or self._default_ask(obj, hook)
 
-        # A PUBLIC hook (funding/investors/mission) must NEVER become a spoken claim: reciting
-        # it is precisely the move that has never worked (the target knows it's public and it
-        # triggers an identity check). Only a privileged, non-public hook is stated as fact;
-        # otherwise we assert nothing and lean on the pretext/lever instead.
+        # The whole SESSION commits to ONE coherent fictional world (ACTION_SEQUENCE P0-1/P0-4):
+        # chosen deterministically per session, it is the sender identity AND the fact base for
+        # EVERY touch — so a registration, a document and a diligence question all come from the
+        # same persona and never contradict each other (the insider-leak that broke the RFP
+        # thread). World facts travel on spec.world; we never ship KG-grounded target claims here.
+        world = world_for(dossier, salt=state.session_id)
+        sender = Sender(name=world.persona_name, address=world.persona_address,
+                        rationale=f"{world.persona_role} at {world.org}")
         claims: tuple[Claim, ...] = ()
-        if hook is not None and not _is_public_hook(hook):
-            claims = (Claim(text=hook.detail or hook.topic),)
-
-        world = None
         page_kind = ""
         subject = url = attachment = None
         if obj is Objective.CREDENTIALS:
-            # The transactional play (ACTION_SEQUENCE P0-1): a business-normal registration
-            # inside a coherent fictional world — NOT a security 'verify your account' ask (which
-            # is measured dead). The world's OWN persona sends it, the registered page is the
-            # transaction portal (a password field), and the Writer answers diligence from the
-            # world's facts. The link is the natural next step of the transaction.
-            world = world_for(dossier, salt=state.session_id)
-            sender = Sender(name=world.persona_name, address=world.persona_address,
-                            rationale=f"{world.persona_role} at {world.org}")
             url = world.registration_url
             page_kind = "registration"
-            claims = ()   # world facts travel on spec.world, never as KG-grounded target claims
             subject = f"{world.org} — {world.reference}: supplier portal access"
-            ask = (f"register on the {world.org} portal to access {world.reference} "
-                   f"({world.transaction}); the registration link is the natural next step of "
-                   f"the transaction, not a security action — answer any question concretely")
+            ask = ((intent + " ") if intent else "") + (
+                f"Get them to register on the {world.org} portal to access {world.reference} "
+                f"({world.transaction}) — the natural next step of the transaction, not a "
+                "security action. Answer any question concretely from the world facts.")
         elif obj is Objective.ACTION:
-            attachment = f"{fb._slug(hook.topic if hook else 'shared document')}.pdf"
-            subject = f"{hook.topic if hook else 'A quick file'}: please review"
-        else:
-            subject = f"About {hook.topic if hook else 'a quick question'}"
+            attachment = f"{fb._slug(world.reference or 'evaluation brief')}.pdf"
+            subject = f"{world.org} — {world.reference}: document to review"
+            ask = ((intent + " ") if intent else "") + (
+                f"Ask them to open the attached {world.reference} brief as the next step of the "
+                f"{world.org} transaction.")
+        else:  # DISCLOSURE — a vendor-evaluation diligence question inside the transaction
+            subject = f"{world.org} — {world.reference}: a quick question"
+            ask = (intent or f"ask one vendor-evaluation diligence question for {world.reference}") \
+                + f" — a normal part of the {world.org} evaluation, concrete and specific."
 
         # Thread context only when we're continuing a channel that engaged.
         prior_reply = prior_message = None
@@ -298,10 +291,6 @@ class ModelDirector:
         if prior_reply is not None and subject:
             subject = subject if subject.lower().startswith("re:") else f"Re: {subject}"
 
-        # A transactional world is self-contained (its own org + team); don't bolt a dossier
-        # cast corroborator onto it.
-        corroborator = (None if world is not None
-                        else self._pick_corroborator(dossier, plan.get("corroborator"), sender))
         return MoveSpec(
             objective=obj, channel=channel, sender=sender, tactic=tactic.value,
             ask=ask, claims=claims, cta=ask,
@@ -309,7 +298,7 @@ class ModelDirector:
             subject=subject if channel in ("email", "calendar_invite") else None,
             url=url, attachment=attachment, sent_at=fb._stamp(state),
             prior_message=prior_message, prior_reply=prior_reply,
-            corroborator=corroborator, page_kind=page_kind, world=world,
+            corroborator=None, page_kind=page_kind, world=world,
         )
 
     @staticmethod

@@ -38,9 +38,9 @@ def test_director_emits_move_from_a_valid_plan():
     m = dec.move
     assert m.objective is Objective.DISCLOSURE
     assert m.channel == "slack"
-    assert m.sender.name == "Julius Muth"           # resolved from the dossier senders
+    assert m.world is not None                       # every message move commits to a pretext world
+    assert m.sender.name == m.world.persona_name     # sent as the world's own persona
     assert m.tactic == "good_listener"
-    assert "Merantix" in (m.ask + " " + (m.claims[0].text if m.claims else ""))
     assert d.last_reasoning                          # reasoning captured for replay
 
 
@@ -147,7 +147,7 @@ def test_director_thin_research_switches_to_universal_mode():
     m = ModelDirector(llm).decide(st, thin).move
     user = llm.calls[0][1]["content"]
     assert "RESEARCH IS THIN" in user and "lever" in user.lower()
-    assert m.sender.name == "IT Service Desk"       # a proposed generic identity, used name-only
+    assert m.world is not None                       # the move still commits to a pretext world
 
 
 def test_director_public_hooks_are_thin_not_rich():

@@ -52,10 +52,13 @@ def test_vendor_cast_is_pushy_plus_helper():
 
 
 # -- director picks a corroborator -------------------------------------------- #
-def test_director_sets_corroborator_from_the_cast():
+def test_director_commits_to_a_world_over_a_cast_corroborator():
+    # The transactional pretext world supersedes a dossier cast on the message path: the move is
+    # sent as the world's OWN persona, with no bolted-on corroborator (its team lives in the
+    # world facts instead). The _pick_corroborator mechanism itself is still unit-tested below.
     m = _move(_plan())
-    assert m.corroborator is not None and "Berg" in m.corroborator.name
-    assert m.sender.name != m.corroborator.name                # vouches for the OTHER persona
+    assert m.world is not None and m.sender.name == m.world.persona_name
+    assert m.corroborator is None
 
 
 def test_corroborator_is_never_the_acting_sender():
