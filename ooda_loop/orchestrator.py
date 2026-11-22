@@ -26,6 +26,7 @@ from core.interfaces import (
 from core.models import Claim, MoveSpec, Outcome
 from ooda_loop import guard
 from ooda_loop.decider import Decider
+from ooda_loop.ledger import AttemptRecord, StrategyLedger, outcome_of
 from ooda_loop.state import ContactRecord, Decision, LoopState, Transcript
 
 
@@ -40,6 +41,7 @@ class OodaLoop:
         renderer: Renderer,
         decider: Optional[Decider] = None,
         grounding: Optional[GroundingProvider] = None,
+        ledger: Optional[StrategyLedger] = None,
     ) -> None:
         self.client = client
         self.reader = reader
@@ -48,6 +50,9 @@ class OodaLoop:
         self.renderer = renderer
         self.decider = decider or Decider()
         self.grounding = grounding
+        # Cross-run campaign memory (optional). When present, the target's prior-run briefing is
+        # injected into the Director and each touch's outcome is recorded for the next run.
+        self.ledger = ledger
 
     def run_session(
         self,
@@ -65,6 +70,8 @@ class OodaLoop:
             budget = min(budget, max_contacts)
 
         state = LoopState(dossier=dossier, session_id=session.session_id, budget=budget)
+        if self.ledger is not None:                        # cross-run awareness for the Director
+            state.prior_runs = self.ledger.summarize(target_id)
         self.memory.journal(session.session_id, "session_start",
                             {"target": target_id, "scenario": scenario_id, "budget": budget})
 
@@ -144,6 +151,7 @@ class OodaLoop:
         state.record_contact(spec, signals)                 # Orient (integrates suspicion)
         state.thread.append((spec.channel, rendered.body,   # full exchange for the Director
                              signals.reply_text or "(silence)"))
+        self._record_attempt(state, spec, signals, target_id)   # cross-run ledger
         self.memory.set_suspicion(state.session_id, state.suspicion)
         self.memory.journal(state.session_id, "contact", {
             "objective": spec.objective.value,
@@ -175,6 +183,30 @@ class OodaLoop:
             incident=signals.incident,
             suspicion=signals.suspicion,
         )
+
+    def _record_attempt(self, state: LoopState, spec: MoveSpec, signals, target_id: str) -> None:
+        """Log this touch's who/how/outcome to the cross-run ledger, so a later run's Director
+        sees it and diversifies. Never fails the run."""
+        if self.ledger is None:
+            return
+        outcome = outcome_of(incident=signals.incident is not None,
+                             suspicion=signals.suspicion, replied=signals.replied)
+        if signals.incident is not None:
+            detail = f"WIN: {signals.incident.evidence}"[:120]
+        elif signals.reply_text:
+            detail = f"replied: {signals.reply_text[:90]}"
+        else:
+            detail = "silent"
+        try:
+            self.ledger.record(AttemptRecord(
+                target_id=target_id,
+                strategy=getattr(self.decider, "last_strategy", "") or "",
+                persona=spec.sender.name or spec.sender.address or "?",
+                tactic=spec.tactic, channel=spec.channel, objective=spec.objective.value,
+                outcome=outcome, detail=detail, run_id=state.session_id,
+            ))
+        except Exception:  # noqa: BLE001 — ledger bookkeeping must never fail a run
+            pass
 
     def _brand(self, dossier):
         """Best-effort: fetch the company logo and upload it once, so this session's mails

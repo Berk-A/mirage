@@ -23,9 +23,10 @@ def _state(**kw):
 
 
 def _plan(**kw):
-    base = {"reasoning": "cold open, warm and specific", "objective": "disclosure",
-            "channel": "slack", "sender": "Julius", "hook": "their investor Merantix Capital",
-            "tactic": "good_listener", "intent": "open warmly about Merantix, build rapport"}
+    base = {"reasoning": "cold open, warm and specific", "strategy": "cold_rapport",
+            "objective": "disclosure", "channel": "slack", "sender": "Julius",
+            "hook": "their investor Merantix Capital", "tactic": "good_listener",
+            "intent": "open warmly about Merantix, build rapport"}
     base.update(kw)
     return json.dumps(base)
 
@@ -101,6 +102,37 @@ def test_director_threads_reply_only_on_an_engaged_channel():
 # --------------------------------------------------------------------------- #
 # Thin-research fallback: when intel is weak, use universal-susceptibility approaches
 # --------------------------------------------------------------------------- #
+def test_director_injects_prior_runs_for_cross_run_diversity():
+    d = ModelDirector(FakeLLM(responses=[_plan()]))
+    st = _state()
+    st.prior_runs = "PRIOR ATTEMPTS vs this target across 1 run(s): - press (as Lena) → walled"
+    d.decide(st, DOSSIER)
+    user = llm_user(d)
+    assert "PRIOR RUNS" in user and "press (as Lena)" in user
+
+
+def test_director_system_lists_the_strategy_menu():
+    d = ModelDirector(FakeLLM(responses=[_plan()]))
+    d.decide(_state(), DOSSIER)
+    system = d.llm.calls[0][0]["content"]
+    assert "STRATEGY MENU" in system and "reverse_se_vendor" in system
+    assert "CROSS-RUN DIVERSITY" in system
+
+
+def test_director_captures_chosen_strategy():
+    d = ModelDirector(FakeLLM(responses=[_plan(strategy="reverse_se_vendor")]))
+    d.decide(_state(), DOSSIER)
+    assert d.last_strategy == "reverse_se_vendor"
+    # an invalid strategy is dropped (not propagated to the ledger)
+    d2 = ModelDirector(FakeLLM(responses=[_plan(strategy="nonsense")]))
+    d2.decide(_state(), DOSSIER)
+    assert d2.last_strategy == ""
+
+
+def llm_user(d):
+    return d.llm.calls[0][1]["content"]
+
+
 def test_director_thin_research_switches_to_universal_mode():
     thin = Dossier(target_id="x", display_name="X", role="Engineer",
                    hooks=(Hook(topic="public thing", detail="public", confidence=0.3),),

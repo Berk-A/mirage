@@ -40,6 +40,7 @@ def build_loop():
     from ooda_loop.conversation import ConversationLoop
     from ooda_loop.director import ModelDirector
     from ooda_loop.grading import HeuristicDisclosureGrader, LLMDisclosureGrader
+    from ooda_loop.ledger import StrategyLedger
     from ooda_loop.reader import ReactionReader
     from research.seeds import default_provider
 
@@ -55,6 +56,7 @@ def build_loop():
         dossiers=default_provider(),
         renderer=renderer,
         director=director,
+        ledger=StrategyLedger(),
     )
 
 

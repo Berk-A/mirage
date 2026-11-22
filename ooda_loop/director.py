@@ -25,10 +25,13 @@ from core.models import (
     Sender,
 )
 from ooda_loop.decider import ASYNC_SILENT_CHANNELS, Decider
+from ooda_loop.ledger import STRATEGIES, STRATEGY_KEYS
 from ooda_loop.state import Decision, LoopState
 
 _OBJECTIVES = {o.value: o for o in Objective}
 _TACTICS = {t.value: t for t in ElicitationTactic}
+_STRATEGIES = set(STRATEGY_KEYS)
+_STRATEGY_MENU = "\n".join(f"    {k} — {desc}" for k, desc in STRATEGIES)
 
 # Public / common-knowledge markers. A hook about the funding round, investors, or the public
 # mission is NOT a lever: the target knows it is public, so opening by reciting it reads as cold
@@ -73,8 +76,15 @@ DIRECTOR_SYSTEM = (
     "info (their funding round, investors, mission) is counter-productive: it reads as cold "
     "spam and triggers an identity check before any rapport. Lead with a reason to talk that "
     "fits who you are, not with a fact they know is public.\n\n"
+    "STRATEGY MENU — pick the one high-level approach for this move:\n"
+    + _STRATEGY_MENU + "\n\n"
+    "CROSS-RUN DIVERSITY: this is a multi-run campaign (3 sessions × 10 touches). When PRIOR "
+    "ATTEMPTS are shown, you are on a LATER run: do NOT repeat a strategy+persona that already "
+    "failed — deliberately choose a DIFFERENT strategy (prefer an untried one) and a fresh "
+    "persona. Reserve your strongest, most-grounded approach for when rapport allows it.\n\n"
     "Respond with ONLY a JSON object (no prose, no code fence), keys:\n"
     "  reasoning: 1-2 sentences — your read of the target and why this move now.\n"
+    "  strategy:  one key from the STRATEGY MENU above.\n"
     "  objective: disclosure | action | credentials\n"
     "  channel:   one channel id (e.g. slack, email, whatsapp, linkedin_message)\n"
     "  sender:    the name of the identity to send as (pick from the available senders)\n"
@@ -98,6 +108,7 @@ class ModelDirector:
         self.temperature = temperature
         self.max_history = max_history
         self.last_reasoning: str = ""   # instrumentation / replay
+        self.last_strategy: str = ""    # the high-level strategy the last plan chose (ledger)
 
     def decide(self, state: LoopState, dossier: Dossier) -> Decision:
         # Same hard stops as the rule decider — these are policy, not up to the model.
@@ -112,6 +123,8 @@ class ModelDirector:
             move = self._to_move(plan, state, dossier)
             if move is not None:
                 self.last_reasoning = str(plan.get("reasoning", ""))[:400]
+                strat = str(plan.get("strategy", "")).lower().strip()
+                self.last_strategy = strat if strat in _STRATEGIES else ""
                 return Decision.act(move)
         except Exception:  # noqa: BLE001 — any model/parse failure falls back to the rules
             pass
@@ -181,6 +194,8 @@ class ModelDirector:
             mode = ("RESEARCH IS RICH — anchor the pretext on a specific grounded hook above and "
                     "be personal and precise; that specificity is your edge.")
 
+        prior = (f"\nPRIOR RUNS — {state.prior_runs}\n" if state.prior_runs else "")
+
         return (
             f"TARGET: {dossier.display_name or dossier.target_id}, {dossier.role} "
             f"(archetype: {dossier.archetype}).\n\n"
@@ -189,7 +204,8 @@ class ModelDirector:
             f"{hooks}\n"
             f"tools/vendors they use (credential surfaces): {vendors}\n"
             f"sender identities available:\n{senders}\n"
-            f"facts: {facts}\n\n"
+            f"facts: {facts}\n"
+            f"{prior}\n"
             f"CONVERSATION SO FAR — {len(state.thread)} touches done, "
             f"{state.contacts_left} left; suspicion {state.suspicion:.2f}; "
             f"channels tried: {tried}:\n{convo}\n\n"

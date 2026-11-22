@@ -66,6 +66,10 @@ class LoopState:
     # The full exchange so far, per touch: (channel, our_message, their_reply_or_"(silence)").
     # This is the Orient record the model Director reasons over to adapt.
     thread: list[tuple[str, str, str]] = field(default_factory=list)
+    # Cross-run campaign awareness: a compact briefing (from the StrategyLedger) of what
+    # strategy/persona/tactic has been tried against THIS target in prior runs and how it fared,
+    # injected at session start so the Director deliberately diversifies across the 3 eval runs.
+    prior_runs: str = ""
     followups_on_current: int = 0
     # Adaptive reorientation: per-channel first-contact outcome ("engaged"/"silent"/
     # "suspicious"), and whether we've advanced from the door-opener to the event-backed

@@ -29,6 +29,7 @@ from core.interfaces import DossierProvider, GroundingProvider, Memory, Renderer
 from core.models import Claim, Dossier, Event, EventType, Incident, MoveSpec, Sender
 from ooda_loop.decider import Decider
 from ooda_loop.director import ModelDirector
+from ooda_loop.ledger import AttemptRecord, StrategyLedger, outcome_of
 from ooda_loop.state import LoopState
 
 # A conversation lives on ONE interactive channel. live_chat is the practice vehicle; the
@@ -130,6 +131,7 @@ class ConversationLoop:
         director: ModelDirector,
         memory: Optional[Memory] = None,
         grounding: Optional[GroundingProvider] = None,
+        ledger: Optional[StrategyLedger] = None,
     ) -> None:
         self.client = client
         self.reader = reader
@@ -138,6 +140,7 @@ class ConversationLoop:
         self.director = director
         self.memory = memory
         self.grounding = grounding
+        self.ledger = ledger        # cross-run campaign memory (optional)
         self._fallback: Decider = director.fallback or Decider()
 
     # ------------------------------------------------------------------ #
@@ -178,6 +181,8 @@ class ConversationLoop:
         # Seed the persona's opening line as the "last reply" so the very first turn is
         # rendered as a natural answer to their greeting (not a cold email open), while the
         # Director still sees an empty thread and plans the opening gambit.
+        if self.ledger is not None:                     # cross-run awareness for the Director
+            state.prior_runs = self.ledger.summarize(target_id)
         if opening:
             state.last_reply = opening
             state.last_engaged_reply = opening
@@ -235,6 +240,7 @@ class ConversationLoop:
 
         self._end(conv_id)
         state.contacts_used = 1   # the whole conversation cost exactly one touch
+        self._record_attempt(state, sender, channel, turns, target_id)
 
         return ConversationTranscript(
             session_id=session_id, target_id=target_id, conversation_id=conv_id,
@@ -282,6 +288,33 @@ class ConversationLoop:
             "expected_page_ids": frozenset(),
             "target_role": getattr(dossier, "role", "") or "",
         })
+
+    def _record_attempt(self, state: LoopState, sender: Sender, channel: str,
+                        turns, target_id: str) -> None:
+        """Record this whole conversation as one cross-run ledger attempt (it is one touch).
+        Never fails the run."""
+        if self.ledger is None:
+            return
+        replied = any(t.persona_says for t in turns)
+        max_susp = max((t.suspicion for t in turns), default=0.0)
+        won = state.incident is not None
+        outcome = outcome_of(incident=won, suspicion=max_susp, replied=replied)
+        if won:
+            detail = f"WIN: {state.incident.evidence}"[:120]
+        elif turns:
+            detail = f"{len(turns)} turns; last: {(turns[-1].persona_says or '')[:70]}"
+        else:
+            detail = "no engagement"
+        try:
+            self.ledger.record(AttemptRecord(
+                target_id=target_id,
+                strategy=self.director.last_strategy or "",
+                persona=sender.name or sender.address or "?",
+                tactic="", channel=channel, objective="disclosure",
+                outcome=outcome, detail=detail, run_id=state.session_id,
+            ))
+        except Exception:  # noqa: BLE001 — ledger bookkeeping must never fail a run
+            pass
 
     def _pick_sender(self, dossier: Dossier, target_company: Optional[str] = None) -> Sender:
         """Choose who to open as. For a COLD conversational open, an insider-lookalike (a

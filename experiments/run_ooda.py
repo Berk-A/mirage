@@ -185,12 +185,17 @@ def main(argv=None) -> int:
     targets = [t.strip() for t in a.targets.split(",") if t.strip()]
     results = []
 
+    # Persistent cross-run ledger: survives across the 3 eval processes so the Director sees
+    # what prior runs tried against each target and diversifies.
+    from ooda_loop.ledger import StrategyLedger
+    ledger = StrategyLedger()
+
     for tgt in targets:
         _dump_dossier(kg.get_dossier(tgt), f"{out}/{tgt}_dossier.json")  # research/KG stage
         rec = RecordingClient(Revel8Client(), f"{out}/{tgt}.jsonl")
         loop = OodaLoop(client=rec, reader=ReactionReader(disclosure_grader=grader),
                         memory=ThreeTierMemory(), dossiers=kg, renderer=renderer,
-                        decider=make_decider(), grounding=kg)
+                        decider=make_decider(), grounding=kg, ledger=ledger)
         t0 = time.time()
         tr = loop.run_session(tgt, max_contacts=a.max_contacts)
         dt = time.time() - t0
