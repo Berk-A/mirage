@@ -6,23 +6,21 @@
   <title>MIRAGE — Evaluation overview</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="wrap">
     <header class="topbar">
       <div class="brand">
-        <div class="logo">◎</div>
-        <h1>Mirage · <b>Evaluation overview</b></h1>
+        <span class="logo" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>
+        </span>
+        <h1>MIRAGE<span class="sep">/</span><span class="dim">Evaluation overview</span></h1>
       </div>
       <div class="spacer"></div>
-      <div class="search">
-        <span>⌕</span>
-        <input id="search" placeholder="Search runs, senders, targets…" />
-      </div>
-      <button class="icon-btn" title="Notifications">◔</button>
-      <button class="btn" id="new-run">▷ New run</button>
+      <button class="icon-btn" id="theme-toggle" title="Toggle light / dark" aria-label="Toggle theme"></button>
+      <button class="btn" id="new-run">New run</button>
     </header>
 
     <nav class="nav" id="nav">
