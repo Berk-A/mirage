@@ -211,8 +211,8 @@ def _clean_posts(posts: object, max_posts: int) -> list[dict]:
         if not isinstance(text, str) or not text.strip():
             continue
         entry: dict[str, object] = {"text": " ".join(text.split())[:400]}
-        raw_date = (post.get("date") or post.get("created_at") or post.get("published")
-                    or post.get("time") or "")
+        raw_date = (post.get("date") or post.get("created_at") or post.get("datetime")
+                    or post.get("published") or post.get("time") or "")
         date = parse_http_date(str(raw_date)) or None
         if date:
             entry["date"] = date
