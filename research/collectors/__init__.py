@@ -17,7 +17,15 @@ from .brave import BraveSearchCollector
 from .feeds import FeedCollector
 from .github import GitHubCollector
 from .search import SerpApiDiscoveryCollector, serpapi_available
+from .social import (
+    FacebookCollector,
+    InstagramCollector,
+    LinkedInCollector,
+    SocialProfileCollector,
+    social_available,
+)
 from .web import HttpFetcher, WebCollector
+from .website import WebsiteCollector
 
 __all__ = [
     "WebCollector",
@@ -33,4 +41,10 @@ __all__ = [
     "holehe_available",
     "maigret_available",
     "BraveSearchCollector",
+    "SocialProfileCollector",
+    "LinkedInCollector",
+    "FacebookCollector",
+    "InstagramCollector",
+    "social_available",
+    "WebsiteCollector",
 ]

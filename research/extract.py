@@ -155,6 +155,10 @@ _SITE_SUFFIX = re.compile(r"\s[-–|]\s[^-–|]{1,40}$")
 # --------------------------------------------------------------------------- #
 # Public API
 # --------------------------------------------------------------------------- #
+SOCIAL_SOURCE_TYPES = frozenset({"linkedin", "facebook", "instagram"})
+_SOCIAL_LABELS = {"linkedin": "LinkedIn", "facebook": "Facebook", "instagram": "Instagram"}
+
+
 def extract(doc: RawDoc, seed: Seed) -> list[Fact]:
     if doc.source_type == "github":
         facts = _extract_github(doc, seed)
@@ -162,6 +166,8 @@ def extract(doc: RawDoc, seed: Seed) -> list[Fact]:
         facts = _extract_feed(doc, seed)
     elif doc.source_type in ("holehe", "maigret"):
         facts = _extract_account(doc, seed)
+    elif doc.source_type in SOCIAL_SOURCE_TYPES:
+        facts = _extract_social(doc, seed)
     else:  # web, search, talk, ...
         facts = _extract_web(doc, seed)
     return [f for f in facts if f.object_value.strip() and f.canonical_claim.strip()]
@@ -389,6 +395,75 @@ def _classify_account(service: str) -> tuple[Optional[str], Optional[str]]:
         if key in norm:
             return "platform", display
     return None, None
+
+
+def _extract_social(doc: RawDoc, seed: Seed) -> list[Fact]:
+    """Structured facts from a scraped social profile (LinkedIn/Facebook/Instagram).
+
+    The record is already parsed into fields by the collector, so — unlike arbitrary web
+    prose — the title/company are structured, high-confidence signals. But a wrong URL
+    could point at the wrong person, so we emit NOTHING unless the profile's own name
+    matches the target (favour empty over wrong, like the rest of the extractor).
+    """
+    meta = doc.meta or {}
+    fields = meta.get("fields") or {}
+    if not isinstance(fields, dict):
+        return []
+    profile_name = str(fields.get("name") or "")
+    if not profile_name or not _mentions_target(profile_name.lower(), seed):
+        return []  # identity unconfirmed → no facts
+
+    name = seed.name
+    platform = str(meta.get("platform") or doc.source_type)
+    label = _SOCIAL_LABELS.get(platform, platform)
+    facts: list[Fact] = []
+
+    title = _strip_employer(str(fields.get("title") or "").strip())
+    company = str(fields.get("company") or "").strip()
+    if title:
+        facts.append(_fact(seed, "role_is", title, doc,
+                           claim=f"{name} is {title} (per {label}).", confidence=0.8))
+    if company:  # duplicate works_at across sources is merged by the graph
+        facts.append(_fact(seed, "works_at", company, doc,
+                           claim=f"{name} works at {company} (per {label}).", confidence=0.8))
+
+    posts = meta.get("posts") or []
+    hooks_added = 0
+    for post in posts if isinstance(posts, list) else []:
+        if hooks_added >= 3:
+            break
+        if not isinstance(post, dict):
+            continue
+        event_date = post.get("date")
+        snippet = str(post.get("text") or "").strip()
+        if not event_date or not snippet:
+            continue  # only dated posts become hooks (recency needs a real date)
+        # Topic = the post's OWN leading clause — distinct per post (so each dated post
+        # stays its own hook, not collapsed by the graph's topic dedup) and accurate (a
+        # social caption is not a news headline, so the headline classifier would mislabel
+        # it, e.g. a 'glitter' post as 'a funding round').
+        topic = _social_post_topic(snippet) or f"their recent {label} activity"
+        short = snippet[:120].strip()
+        facts.append(_fact(seed, "engaged_with", topic, doc,
+                           claim=f'On {event_date}, {name} posted on {label}: "{short}".',
+                           confidence=0.5, event_date=str(event_date)))
+        hooks_added += 1
+    return facts
+
+
+def _social_post_topic(text: str, *, max_words: int = 8) -> str:
+    """A short, accurate Topic label from a post's own leading clause (first sentence or
+    ~`max_words` words). Keeps each post a distinct hook without inventing a classification."""
+    head = re.split(r"(?<=[.!?])\s|[\n\r]", text.strip(), maxsplit=1)[0].strip()
+    words = head.split()
+    slug = " ".join(words[:max_words]).strip(" \"'“”‘’-–—:·•")
+    return slug
+
+
+def _strip_employer(title: str) -> str:
+    """'Co-Founder & CEO at revel8' → 'Co-Founder & CEO'. Keeps the role clean so the
+    archetype classifier and the dossier role read well."""
+    return re.split(r"\s+(?:at|@)\s+", title, maxsplit=1)[0].strip() if title else title
 
 
 # --------------------------------------------------------------------------- #
