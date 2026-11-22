@@ -124,6 +124,26 @@ class LoopState:
         self.followups_on_current = 0
         self.channels_tried.clear()
 
+    def record_turn(self, spec: MoveSpec, signals: Signals) -> None:
+        """Integrate ONE live-conversation turn into the Orient scratchpad.
+
+        Unlike `record_contact`, a turn spends NO message-budget touch — a whole live
+        conversation is a single touch of up to N turns (docs/target-api.md, "Conversations"),
+        so this updates only what the Director reasons over turn to turn: the suspicion motor,
+        the reply memory (preserved across a silent turn), engagement, and any incident. The
+        caller appends the `thread` entry (as the orchestrator does for messages)."""
+        self.last_signals = signals
+        self.update_suspicion(signals.suspicion, silent=signals.silent)
+        if signals.reply_text:
+            self.last_reply = signals.reply_text
+            self.last_engaged_reply = signals.reply_text   # preserved across later silence
+        else:
+            self.last_reply = None
+        if signals.replied:
+            self.ever_engaged.add(spec.channel)
+        if signals.incident is not None:
+            self.incident = signals.incident
+
     def record_contact(self, spec: MoveSpec, signals: Signals) -> None:
         self.contacts_used += 1
         self.attempts_on_current += 1
