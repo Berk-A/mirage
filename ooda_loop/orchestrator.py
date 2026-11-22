@@ -42,6 +42,7 @@ class OodaLoop:
         decider: Optional[Decider] = None,
         grounding: Optional[GroundingProvider] = None,
         ledger: Optional[StrategyLedger] = None,
+        cast=None,
     ) -> None:
         self.client = client
         self.reader = reader
@@ -53,6 +54,9 @@ class OodaLoop:
         # Cross-run campaign memory (optional). When present, the target's prior-run briefing is
         # injected into the Director and each touch's outcome is recorded for the next run.
         self.ledger = ledger
+        # Multi-persona cast (optional). When present, its coordinated members replace the
+        # dossier's senders, so the Director can rotate personas and name a corroborator.
+        self.cast = cast
 
     def run_session(
         self,
@@ -62,6 +66,8 @@ class OodaLoop:
         max_contacts: Optional[int] = None,
     ) -> Transcript:
         dossier = self.dossiers.get_dossier(target_id, scenario_id=scenario_id)
+        if self.cast is not None:                 # multi-persona: coordinated cast as senders
+            dossier = replace(dossier, senders=tuple(self.cast.senders))
         dossier = self._brand(dossier)            # upload the company logo once, if we can
         session = self.client.new_session(scenario_id)
 

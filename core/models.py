@@ -299,6 +299,11 @@ class MoveSpec:
     # re-send a fresh ask. Both are plain text (what we last sent, what they replied).
     prior_message: Optional[str] = None
     prior_reply: Optional[str] = None
+    # Multi-persona orchestration: another identity in our own cast that THIS message references
+    # as an already-involved colleague ("my colleague X set this up", "cc'ing X"). It builds a
+    # verification chain across personas — the mechanic that answers a target's provenance
+    # demand ("who are you coordinating with / who is my contact"). None = a single-persona move.
+    corroborator: Optional["Sender"] = None
 
 
 @dataclass(frozen=True)

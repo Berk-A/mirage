@@ -139,6 +139,9 @@ def main(argv=None) -> int:
     ap.add_argument("--out-dir", default=None)
     ap.add_argument("--provider", choices=("synthetic", "real"), default="synthetic",
                     help="real = live OSINT GraphResearchProvider; synthetic = stub")
+    ap.add_argument("--cast", choices=("none", "audit", "vendor"), default="none",
+                    help="multi-persona: run a coordinated cast (audit = auditor+coordinator; "
+                         "vendor = security-ops+trust-&-safety) as the senders")
     ap.add_argument("--brain", choices=("model", "rule"), default="model",
                     help="model = ModelDirector + ModelCritic (abliterated); rule = deterministic")
     a = ap.parse_args(argv)
@@ -190,12 +193,18 @@ def main(argv=None) -> int:
     from ooda_loop.ledger import StrategyLedger
     ledger = StrategyLedger()
 
+    cast = None
+    if a.cast != "none":
+        from ooda_loop.personas import CASTS
+        cast = CASTS[a.cast]()
+        print(f"cast: {a.cast} — {', '.join(s.name for s in cast.senders)}")
+
     for tgt in targets:
         _dump_dossier(kg.get_dossier(tgt), f"{out}/{tgt}_dossier.json")  # research/KG stage
         rec = RecordingClient(Revel8Client(), f"{out}/{tgt}.jsonl")
         loop = OodaLoop(client=rec, reader=ReactionReader(disclosure_grader=grader),
                         memory=ThreeTierMemory(), dossiers=kg, renderer=renderer,
-                        decider=make_decider(), grounding=kg, ledger=ledger)
+                        decider=make_decider(), grounding=kg, ledger=ledger, cast=cast)
         t0 = time.time()
         tr = loop.run_session(tgt, max_contacts=a.max_contacts)
         dt = time.time() - t0

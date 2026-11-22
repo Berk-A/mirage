@@ -92,7 +92,12 @@ DIRECTOR_SYSTEM = (
     "  tactic:    good_listener | feigned_ignorance | oblique_reference | ego_suspension | "
     "bracketing | quid_pro_quo | macro_to_micro | deliberate_false | plain\n"
     "  intent:    one sentence — exactly what THIS message should accomplish and its angle "
-    "(the Writer renders it into natural text)."
+    "(the Writer renders it into natural text).\n"
+    "  corroborator: (optional) the name of ANOTHER available sender to reference as an "
+    "already-involved colleague — builds a verification chain across identities. Use with "
+    "strategy=multi_persona, above all to answer a 'who is my contact / who are you "
+    "coordinating with' demand: have one identity vouch for the other. Omit for a single "
+    "persona. Name only a sender from the list; never invent one."
 )
 
 
@@ -278,7 +283,24 @@ class ModelDirector:
             subject=subject if channel in ("email", "calendar_invite") else None,
             url=url, attachment=attachment, sent_at=fb._stamp(state),
             prior_message=prior_message, prior_reply=prior_reply,
+            corroborator=self._pick_corroborator(dossier, plan.get("corroborator"), sender),
         )
+
+    @staticmethod
+    def _pick_corroborator(dossier: Dossier, name, acting: Sender) -> Optional[Sender]:
+        """Resolve a named colleague to reference, from the AVAILABLE senders only (never
+        invented), excluding the acting sender — so the verification chain points at a real
+        cast member. None when the plan names none or no distinct match exists."""
+        want = str(name or "").strip().lower()
+        if not want:
+            return None
+        acting_name = (acting.name if acting else "").lower()
+        for s in dossier.senders:
+            if s.name.lower() == acting_name:
+                continue
+            if want in s.name.lower() or s.name.lower() in want:
+                return s
+        return None
 
     @staticmethod
     def _default_ask(obj: Objective, hook) -> str:

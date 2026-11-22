@@ -129,6 +129,16 @@ def writer_user_prompt(spec: MoveSpec, dossier: Dossier) -> str:
         "CLAIMS YOU MAY STATE (and nothing beyond these):",
         _claims_block(spec),
     ]
+    if spec.corroborator is not None:
+        c = spec.corroborator
+        lines.append(
+            f"CORROBORATING COLLEAGUE: reference {c.name}"
+            + (f" ({c.rationale})" if c.rationale else "")
+            + " as an already-involved colleague — e.g. they set this up, you're coordinating "
+            "with them, or cc them — so the recipient has a verifiable second point of contact. "
+            "Mention the name naturally; do NOT fabricate direct quotes from them or invent "
+            "details they supposedly said."
+        )
     if spec.subject:
         lines.append(f"SUGGESTED SUBJECT (for context; do not print it): {spec.subject}")
     if spec.url:
