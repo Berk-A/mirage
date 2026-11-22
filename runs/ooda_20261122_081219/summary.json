@@ -1,0 +1,444 @@
+[
+  {
+    "target": "robert",
+    "session": "s_ff070b99ef",
+    "contacts": 30,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 1093.8,
+    "touches": [
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.38
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.38
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "s.auer@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      }
+    ]
+  },
+  {
+    "target": "tom",
+    "session": "s_344d003416",
+    "contacts": 30,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 1182.7,
+    "touches": [
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "action",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.28
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.28
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.28
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.1
+      }
+    ]
+  }
+]

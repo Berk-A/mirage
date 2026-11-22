@@ -1,0 +1,223 @@
+[
+  {
+    "target": "robert",
+    "session": "s_9da02147e0",
+    "contacts": 30,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 896.0,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "whatsapp",
+        "sender": "Julius Muth",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "sms",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "whatsapp",
+        "sender": "Lena Kowalski",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "Lena Winters",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "Jane Doe",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.roth@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "alerts@stackit-status.io",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "Julia Thompson",
+        "incident": null,
+        "suspicion": 0.1
+      }
+    ]
+  }
+]

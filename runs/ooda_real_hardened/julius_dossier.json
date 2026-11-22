@@ -1,0 +1,28 @@
+{
+  "target_id": "julius",
+  "display_name": "Julius Muth",
+  "role": "Co-Founder & Co-CEO, revel8 (business and go-to-market)",
+  "archetype": "executive_founder",
+  "hooks": [
+    {
+      "topic": "the recent funding round",
+      "detail": "On 2025-09-25, Julius Muth and revel8 were covered by tech.eu: \"revel8 nets €7 million to fight AI-powered cyberattacks - Tech.eu\".",
+      "source_url": "https://tech.eu/2025/09/25/revel8-nets-eur7-million-to-fight-ai-powered-cyberattacks/",
+      "date": "2025-09-25",
+      "confidence": 0.5
+    }
+  ],
+  "senders": [
+    {
+      "name": "Tom Müller",
+      "address": "",
+      "rationale": "Julius Muth and Tom Müller both work at revel8."
+    },
+    {
+      "name": "Robert Seilbeck",
+      "address": "",
+      "rationale": "Julius Muth and Robert Seilbeck both work at revel8."
+    }
+  ],
+  "vendors": []
+}

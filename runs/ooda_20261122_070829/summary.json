@@ -1,0 +1,34 @@
+[
+  {
+    "target": "julius",
+    "session": "s_a9d6341d96",
+    "contacts": 3,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 113.6,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.28
+      }
+    ]
+  }
+]

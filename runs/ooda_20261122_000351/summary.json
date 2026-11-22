@@ -1,0 +1,287 @@
+[
+  {
+    "target": "julius",
+    "session": "s_22fe0c1209",
+    "contacts": 12,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 97.3,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "whatsapp",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "sms",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "telegram",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "signal",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "imessage",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "teams_chat",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "linkedin_message",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "x_dm",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "facebook_messenger",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      }
+    ]
+  },
+  {
+    "target": "tom",
+    "session": "s_59ce649379",
+    "contacts": 12,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 101.9,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.38
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.28
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "whatsapp",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "sms",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "telegram",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "signal",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "imessage",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "teams_chat",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "linkedin_message",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      }
+    ]
+  },
+  {
+    "target": "robert",
+    "session": "s_0a95072cde",
+    "contacts": 12,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 92.3,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "whatsapp",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "sms",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "telegram",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "signal",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "imessage",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "teams_chat",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "linkedin_message",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "x_dm",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "facebook_messenger",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      }
+    ]
+  }
+]

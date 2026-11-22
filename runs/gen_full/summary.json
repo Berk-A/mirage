@@ -1,0 +1,237 @@
+{
+  "overall": {
+    "count": 90,
+    "reliability": {
+      "ok": 1.0,
+      "refusal": 0.0,
+      "empty": 0.0,
+      "too_short": 0.0
+    },
+    "mean_regens": 0,
+    "fell_back_rate": 0.0,
+    "render_latency_ms_mean": 5359.199760155833,
+    "render_latency_ms_median": 5019.147603998135,
+    "guard_violation_rate": 0.0,
+    "sent_count": 0
+  },
+  "by_channel": {
+    "email": {
+      "count": 18,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 6808.874152611679,
+      "render_latency_ms_median": 6856.197353998141,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "linkedin_message": {
+      "count": 18,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 6551.024342610617,
+      "render_latency_ms_median": 6552.394229496713,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "slack": {
+      "count": 18,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 4826.585275499383,
+      "render_latency_ms_median": 4389.353353999468,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "sms": {
+      "count": 18,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 3953.626185111918,
+      "render_latency_ms_median": 4343.896437498188,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "whatsapp": {
+      "count": 18,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 4655.888844945568,
+      "render_latency_ms_median": 4684.40560450108,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  },
+  "by_objective": {
+    "action": {
+      "count": 30,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5045.498192932912,
+      "render_latency_ms_median": 4927.713375000167,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "credentials": {
+      "count": 30,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 6215.29724310094,
+      "render_latency_ms_median": 5950.873333502386,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "disclosure": {
+      "count": 30,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 4816.803844433646,
+      "render_latency_ms_median": 4514.547291004419,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  },
+  "by_tone": {
+    "colleague": {
+      "count": 30,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5354.1699458008225,
+      "render_latency_ms_median": 4976.378291499714,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "professional": {
+      "count": 30,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5701.971779133116,
+      "render_latency_ms_median": 5523.0133539989765,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "urgent": {
+      "count": 30,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5021.457555533561,
+      "render_latency_ms_median": 4655.073833499046,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  },
+  "by_with_link": {
+    "False": {
+      "count": 45,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5078.045224000137,
+      "render_latency_ms_median": 4738.09045899543,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "True": {
+      "count": 45,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5640.354296311529,
+      "render_latency_ms_median": 5493.534332999843,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  },
+  "by_hook_index": {
+    "0": {
+      "count": 90,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5359.199760155833,
+      "render_latency_ms_median": 5019.147603998135,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  }
+}

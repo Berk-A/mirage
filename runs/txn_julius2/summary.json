@@ -1,0 +1,62 @@
+[
+  {
+    "target": "julius",
+    "session": "s_b951edac5c",
+    "contacts": 7,
+    "won": true,
+    "incident": "credentials",
+    "stop_reason": "incident",
+    "seconds": 317.6,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": null,
+        "suspicion": 0.38
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": "credentials",
+        "suspicion": 0.1
+      }
+    ]
+  }
+]

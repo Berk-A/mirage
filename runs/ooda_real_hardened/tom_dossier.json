@@ -1,0 +1,28 @@
+{
+  "target_id": "tom",
+  "display_name": "Tom Müller",
+  "role": "Co-Founder & Co-CEO, revel8 (product)",
+  "archetype": "executive_founder",
+  "hooks": [
+    {
+      "topic": "the recent funding round",
+      "detail": "On 2025-09-25, Tom Müller and revel8 were covered by tech.eu: \"revel8 nets €7 million to fight AI-powered cyberattacks - Tech.eu\".",
+      "source_url": "https://tech.eu/2025/09/25/revel8-nets-eur7-million-to-fight-ai-powered-cyberattacks/",
+      "date": "2025-09-25",
+      "confidence": 0.5
+    }
+  ],
+  "senders": [
+    {
+      "name": "Julius Muth",
+      "address": "",
+      "rationale": "Tom Müller and Julius Muth both work at revel8."
+    },
+    {
+      "name": "Robert Seilbeck",
+      "address": "",
+      "rationale": "Tom Müller and Robert Seilbeck both work at revel8."
+    }
+  ],
+  "vendors": []
+}

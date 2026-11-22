@@ -1,0 +1,98 @@
+[
+  {
+    "target": "julius",
+    "session": "s_6c437d2571",
+    "contacts": 2,
+    "won": false,
+    "incident": null,
+    "stop_reason": "too_suspicious",
+    "seconds": 22.4,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "lena.hofer@eventcrew-muc.de",
+        "incident": null,
+        "suspicion": 0.85
+      }
+    ]
+  },
+  {
+    "target": "tom",
+    "session": "s_6c9833d6d3",
+    "contacts": 1,
+    "won": true,
+    "incident": "disclosure",
+    "stop_reason": "incident",
+    "seconds": 8.6,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "sofia@productweek-eu.example",
+        "incident": "disclosure",
+        "suspicion": 0.6
+      }
+    ]
+  },
+  {
+    "target": "robert",
+    "session": "s_d4eb2cbaee",
+    "contacts": 6,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 44.9,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "disclosure",
+        "channel": "whatsapp",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "email",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "slack",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      },
+      {
+        "objective": "action",
+        "channel": "whatsapp",
+        "sender": "d.krause@cloudonboarding-eu.example",
+        "incident": null,
+        "suspicion": 0.4
+      }
+    ]
+  }
+]

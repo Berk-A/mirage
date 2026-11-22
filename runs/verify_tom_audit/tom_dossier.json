@@ -1,0 +1,478 @@
+{
+  "target_id": "tom",
+  "display_name": "Tom Müller",
+  "role": "Co-Founder & Co-CEO, revel8 (product)",
+  "archetype": "executive_founder",
+  "hooks": [
+    {
+      "topic": "ISO 27001 certification",
+      "detail": "revel8 maintains ISO 27001 certification (an audit/compliance surface).",
+      "source_url": "confirmed:live-recon",
+      "date": "2026-11-22",
+      "confidence": 0.85
+    },
+    {
+      "topic": "Allianz",
+      "detail": "Allianz is a revel8 enterprise customer (public contact-center case).",
+      "source_url": "confirmed:live-recon",
+      "date": "2026-11-22",
+      "confidence": 0.8
+    },
+    {
+      "topic": "the recent funding round",
+      "detail": "revel8 raised €7 million.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "date": "2026-11-02",
+      "confidence": 0.55
+    }
+  ],
+  "senders": [
+    {
+      "name": "Julius Muth",
+      "address": "julius.muth@revel8-team.de",
+      "rationale": "Tom Müller and Julius Muth both work at revel8."
+    },
+    {
+      "name": "Robert Seilbeck",
+      "address": "robert.seilbeck@revel8-team.de",
+      "rationale": "Tom Müller and Robert Seilbeck both work at revel8."
+    }
+  ],
+  "vendors": [
+    {
+      "name": "STACKIT",
+      "login_url": "https://stackit.cloud"
+    },
+    {
+      "name": "GitHub",
+      "login_url": "https://github.com"
+    },
+    {
+      "name": "Calendly",
+      "login_url": "https://calendly.com"
+    },
+    {
+      "name": "Replit",
+      "login_url": "https://replit.com"
+    },
+    {
+      "name": "Trello",
+      "login_url": "https://trello.com"
+    }
+  ],
+  "facts": [
+    {
+      "predicate": "engaged_with",
+      "value": "the company's growth",
+      "claim": "Tom Müller and revel8 were covered by de.linkedin.com: \"revel8\".",
+      "source_url": "https://de.linkedin.com/company/revel8ai",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "works_at",
+      "value": "revel8",
+      "claim": "Tom Müller works at revel8.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-09",
+      "confidence": 0.7
+    },
+    {
+      "predicate": "colleague_of",
+      "value": "Julius Muth",
+      "claim": "Tom Müller and Julius Muth both work at revel8.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-02",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "colleague_of",
+      "value": "Robert Seilbeck",
+      "claim": "Tom Müller and Robert Seilbeck both work at revel8.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-29",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "the recent funding round",
+      "claim": "revel8 raised €7 million.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-02",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Merantix Capital",
+      "claim": "revel8 is backed by Merantix Capital.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Accel",
+      "claim": "revel8 is backed by Accel.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor General Catalyst",
+      "claim": "revel8 is backed by General Catalyst.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Northzone",
+      "claim": "revel8 is backed by Northzone.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Fortino Capital",
+      "claim": "revel8 is backed by Fortino Capital.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "STACKIT",
+      "claim": "revel8 runs its production infrastructure on STACKIT (German sovereign cloud).",
+      "source_url": "https://www.revel8.ai/",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-22",
+      "confidence": 0.9
+    },
+    {
+      "predicate": "co_founded",
+      "value": "revel8",
+      "claim": "Tom Müller is a co-founder of revel8.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "secured_funding",
+      "value": "€7 million",
+      "claim": "revel8 secured €7 million to fight AI-powered cyberattacks.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "works_as",
+      "value": "Co-Founder & Co-CEO of revel8",
+      "claim": "Tom Müller is a Co-Founder & Co-CEO of revel8.",
+      "source_url": "https://tech.eu/2025/09/25/revel8-nets-eur7-million-to-fight-ai-powered-cyberattacks/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "raised_funding",
+      "value": "€7 million",
+      "claim": "revel8 has raised a €7 million funding since its founding in 2024.",
+      "source_url": "https://tech.eu/2025/09/25/revel8-nets-eur7-million-to-fight-ai-powered-cyberattacks/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "mission_of_company",
+      "value": "safeguard organizations from deepfake cyberattacks by fostering lasting human resilience",
+      "claim": "The mission of revel8 is to safeguard organizations from deepfake cyberattacks by fostering lasting human resilience.",
+      "source_url": "https://tech.eu/2025/09/25/revel8-nets-eur7-million-to-fight-ai-powered-cyberattacks/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "role_is",
+      "value": "Co-founder",
+      "claim": "Tom Müller is Co-founder.",
+      "source_url": "https://revel8-f04e95.webflow.io/about",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.7
+    },
+    {
+      "predicate": "role_is",
+      "value": "Founder",
+      "claim": "Tom Müller is Founder.",
+      "source_url": "https://www.crunchbase.com/person/tom-m%C3%BCller-3330",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.7
+    },
+    {
+      "predicate": "role_is",
+      "value": "CEO",
+      "claim": "Tom Müller is CEO.",
+      "source_url": "https://tracxn.com/d/companies/revel8/__y_4-TRqdVfYL7aJoS3_pcFUgSev2HB6U6ZT_96HodDY",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-02",
+      "confidence": 0.7
+    },
+    {
+      "predicate": "works_on",
+      "value": "AI-driven attack simulations",
+      "claim": "Tom Müller is closely involved in designing and evolving AI-driven attack simulations.",
+      "source_url": "https://www.revel8.ai/author/tom-muller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "is_co_founder_of",
+      "value": "revel8",
+      "claim": "Tom Müller is the Co-Founder of revel8",
+      "source_url": "https://revel8-f04e95.webflow.io/about",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "works_on",
+      "value": "product development",
+      "claim": "Tom Müller leads product development at revel8",
+      "source_url": "https://revel8-f04e95.webflow.io/about",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "works_for",
+      "value": "revel8",
+      "claim": "Tom Müller is a Co-Founder at revel8",
+      "source_url": "https://www.linkedin.com/in/tom-m%C3%BCller-18089814a/",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-07-31",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "worked_at",
+      "value": "Celonis",
+      "claim": "Tom Müller has experience from previous roles at Celonis.",
+      "source_url": "https://rocketreach.co/tom-muller-email_859266276",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on SoundCloud",
+      "claim": "Tom Müller is active on SoundCloud (https://soundcloud.com/tom-mueller).",
+      "source_url": "https://soundcloud.com/tom-mueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "GitHub",
+      "claim": "Tom Müller has a GitHub account (under a handle they would use).",
+      "source_url": "https://github.com/tom-mueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Bluesky",
+      "claim": "Tom Müller is active on Bluesky (https://bsky.app/profile/tom-mueller.bsky.social).",
+      "source_url": "https://bsky.app/profile/tom-mueller.bsky.social",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "Calendly",
+      "claim": "Tom Müller has a Calendly account (under a handle they would use).",
+      "source_url": "https://calendly.com/tom-mueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on LinkedIn",
+      "claim": "Tom Müller is active on LinkedIn (https://linkedin.com/in/tom-mueller).",
+      "source_url": "https://linkedin.com/in/tom-mueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "Replit",
+      "claim": "Tom Müller has a Replit account (under a handle they would use).",
+      "source_url": "https://replit.com/@tom-mueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Telegram",
+      "claim": "Tom Müller is active on Telegram (https://t.me/tmueller).",
+      "source_url": "https://t.me/tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "Trello",
+      "claim": "Tom Müller has a Trello account (under a handle they would use).",
+      "source_url": "https://trello.com/tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Stack Overflow",
+      "claim": "Tom Müller is active on Stack Overflow (https://stackoverflow.com/users/filter?search=tmueller).",
+      "source_url": "https://stackoverflow.com/users/filter?search=tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Medium",
+      "claim": "Tom Müller is active on Medium (https://medium.com/@tmueller).",
+      "source_url": "https://medium.com/@tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on X",
+      "claim": "Tom Müller is active on X (https://twitter.com/tmueller).",
+      "source_url": "https://twitter.com/tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on YouTube",
+      "claim": "Tom Müller is active on YouTube (https://www.youtube.com/@tmueller/about).",
+      "source_url": "https://www.youtube.com/@tmueller/about",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Tumblr",
+      "claim": "Tom Müller is active on Tumblr (https://www.tumblr.com/tmueller).",
+      "source_url": "https://www.tumblr.com/tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "GitLab",
+      "claim": "Tom Müller has a GitLab account (under a handle they would use).",
+      "source_url": "https://gitlab.com/tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "HuggingFace",
+      "claim": "Tom Müller has a HuggingFace account (under a handle they would use).",
+      "source_url": "https://huggingface.co/tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Facebook",
+      "claim": "Tom Müller is active on Facebook (https://www.facebook.com/tmueller).",
+      "source_url": "https://www.facebook.com/tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Pinterest",
+      "claim": "Tom Müller is active on Pinterest (https://www.pinterest.com/tmueller/).",
+      "source_url": "https://www.pinterest.com/tmueller/",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on WordPress",
+      "claim": "Tom Müller is active on WordPress (https://profiles.wordpress.org/tmueller/).",
+      "source_url": "https://profiles.wordpress.org/tmueller/",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on TikTok",
+      "claim": "Tom Müller is active on TikTok (https://www.tiktok.com/@tmueller).",
+      "source_url": "https://www.tiktok.com/@tmueller",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "works_on",
+      "value": "ISO 27001 certification",
+      "claim": "revel8 maintains ISO 27001 certification (an audit/compliance surface).",
+      "source_url": "confirmed:live-recon",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-22",
+      "confidence": 0.85
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "Allianz",
+      "claim": "Allianz is a revel8 enterprise customer (public contact-center case).",
+      "source_url": "confirmed:live-recon",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-22",
+      "confidence": 0.8
+    }
+  ],
+  "gaps": [
+    "no verified event participation in the last 365 days",
+    "no verified future event schedule"
+  ],
+  "as_of": "2026-11-22",
+  "diagnostics": {
+    "collection_warnings": []
+  }
+}

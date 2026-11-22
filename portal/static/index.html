@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MIRAGE — Evaluation overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="8" r="2" fill="currentColor"/></svg>
+        </span>
+        <h1>MIRAGE<span class="sep">/</span><span class="dim">Evaluation overview</span></h1>
+      </div>
+      <div class="spacer"></div>
+      <button class="icon-btn" id="theme-toggle" title="Toggle light / dark" aria-label="Toggle theme"></button>
+      <button class="btn" id="new-run">New run</button>
+    </header>
+
+    <nav class="nav" id="nav">
+      <a href="#dashboard" data-view="dashboard">Dashboard</a>
+      <a href="#dossiers" data-view="dossiers">Targets &amp; dossiers</a>
+      <a href="#ledger" data-view="ledger">Strategy ledger</a>
+    </nav>
+
+    <div id="banner"></div>
+    <main id="view"></main>
+  </div>
+
+  <div id="modal-root"></div>
+  <script src="app.js"></script>
+</body>
+</html>
