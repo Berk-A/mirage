@@ -280,16 +280,25 @@ class _DiskCache:
 
 
 # --------------------------------------------------------------------------- #
-# Default live transport: resolve a dataset via `bdata pipelines`, run collect_by_url,
-# normalise the platform JSON into our flat record. Best-effort + fully degrading; the
-# unit tests never reach this (they inject a fake `scrape`).
+# Default live transport. Two Bright Data CLI generations are in the wild and we support
+# both, trying the one installed here first:
+#   * v0.3.x — fixed pipeline *types*:  `bdata pipelines <type> <url> --format json`
+#   * v0.4.0+ — dataset + method:        `bdata pipelines run <dataset> collect_by_url <url>`
+# Best-effort + fully degrading: the unit tests never reach this (they inject a fake
+# `scrape`); a wrong guess or a down backend just yields no docs, never a crash.
 # --------------------------------------------------------------------------- #
-# Well-known Bright Data dataset ids for people/profile scrapers. Overridable by env so a
-# changed id never needs a code change; if unset we resolve it live via `pipelines search`.
-_DATASET_ENV = {
-    "linkedin": "BRIGHTDATA_LINKEDIN_DATASET",
-    "facebook": "BRIGHTDATA_FACEBOOK_DATASET",
-    "instagram": "BRIGHTDATA_INSTAGRAM_DATASET",
+# v0.3.x fixed pipeline type per platform (from `bdata pipelines list`). Facebook has NO
+# person-profile scraper in the catalog, so it stays unmapped → the live path returns
+# None and the collector degrades (the collector + extraction still work on any newer CLI
+# or dataset that does expose one, via an injected transport). Overridable by env.
+_PIPELINE_TYPE = {
+    "linkedin": "linkedin_person_profile",
+    "instagram": "instagram_profiles",
+}
+_TYPE_ENV = {
+    "linkedin": "BRIGHTDATA_LINKEDIN_PIPELINE",
+    "facebook": "BRIGHTDATA_FACEBOOK_PIPELINE",
+    "instagram": "BRIGHTDATA_INSTAGRAM_PIPELINE",
 }
 _SEARCH_QUERY = {
     "linkedin": "linkedin profiles",
@@ -300,11 +309,51 @@ _dataset_cache: dict[str, Optional[str]] = {}
 
 
 def cli_pipeline_scrape(
-    platform: str, url: str, *, bdata: str = "bdata", timeout: float = 25.0
+    platform: str, url: str, *, bdata: str = "bdata", timeout: float = 60.0
 ) -> Optional[dict]:
     """Scrape one profile via the Bright Data structured scrapers using the stored login."""
     if shutil.which(bdata) is None:
         return None
+    record = _run_fixed_type(platform, url, bdata=bdata, timeout=timeout)
+    if record is None:  # newer CLI removed fixed types → try the dataset/method interface
+        record = _run_dataset_method(platform, url, bdata=bdata, timeout=timeout)
+    if not isinstance(record, dict) or record.get("error"):
+        return None
+    return _normalise_platform_record(platform, record, url)
+
+
+def _parse_first_record(stdout: str) -> Optional[dict]:
+    try:
+        data = json.loads(stdout)
+    except Exception:
+        return None
+    record = data[0] if isinstance(data, list) and data else data
+    return record if isinstance(record, dict) else None
+
+
+def _run_fixed_type(
+    platform: str, url: str, *, bdata: str = "bdata", timeout: float = 60.0
+) -> Optional[dict]:
+    """v0.3.x: `bdata pipelines <type> <url> --format json`."""
+    ptype = os.environ.get(_TYPE_ENV.get(platform, "")) or _PIPELINE_TYPE.get(platform)
+    if not ptype:
+        return None
+    try:
+        proc = subprocess.run(
+            [bdata, "pipelines", ptype, url, "--format", "json"],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if proc.returncode != 0 or not proc.stdout.strip():
+            return None
+        return _parse_first_record(proc.stdout)
+    except Exception:
+        return None
+
+
+def _run_dataset_method(
+    platform: str, url: str, *, bdata: str = "bdata", timeout: float = 60.0
+) -> Optional[dict]:
+    """v0.4.0+: resolve a dataset id, then `bdata pipelines run <dataset> collect_by_url`."""
     dataset = _resolve_dataset(platform, bdata=bdata)
     if not dataset:
         return None
@@ -315,25 +364,18 @@ def cli_pipeline_scrape(
         )
         if proc.returncode != 0 or not proc.stdout.strip():
             return None
-        data = json.loads(proc.stdout)
+        return _parse_first_record(proc.stdout)
     except Exception:
         return None
-    record = data[0] if isinstance(data, list) and data else data
-    if not isinstance(record, dict) or record.get("error"):
-        return None
-    return _normalise_platform_record(platform, record, url)
 
 
 def _resolve_dataset(platform: str, *, bdata: str = "bdata") -> Optional[str]:
-    env = os.environ.get(_DATASET_ENV.get(platform, ""))
-    if env:
-        return env.strip()
     if platform in _dataset_cache:
         return _dataset_cache[platform]
     dataset: Optional[str] = None
     try:
         proc = subprocess.run(
-            [bdata, "pipelines", "search", _SEARCH_QUERY[platform], "--json", "--limit", "5"],
+            [bdata, "pipelines", "search", _SEARCH_QUERY[platform], "--json"],
             capture_output=True, text=True, timeout=20.0,
         )
         if proc.returncode == 0 and proc.stdout.strip():
