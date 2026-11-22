@@ -211,7 +211,9 @@ def _clean_posts(posts: object, max_posts: int) -> list[dict]:
         if not isinstance(text, str) or not text.strip():
             continue
         entry: dict[str, object] = {"text": " ".join(text.split())[:400]}
-        date = parse_http_date(str(post.get("date") or post.get("published") or "")) or None
+        raw_date = (post.get("date") or post.get("created_at") or post.get("published")
+                    or post.get("time") or "")
+        date = parse_http_date(str(raw_date)) or None
         if date:
             entry["date"] = date
         link = post.get("url") or post.get("link")
@@ -405,10 +407,16 @@ def _normalise_platform_record(platform: str, rec: Mapping[str, object], url: st
                     return inner.strip()
         return ""
 
-    out: dict[str, object] = {"url": first("url", "input_url") or url}
+    out: dict[str, object] = {"url": first("input_url", "url") or url}
     out["name"] = first("name", "full_name", "account", "title")
     out["headline"] = first("headline", "position", "biography", "about", "bio")
-    out["title"] = first("title", "position", "job_title", "current_title")
+    # The cleanest title is current_company.title ("Chairman and CEO"); `position` carries
+    # the employer suffix ("... at Microsoft"), stripped downstream anyway.
+    cc = rec.get("current_company")
+    cc_title = cc.get("title") if isinstance(cc, Mapping) else None
+    out["title"] = ((cc_title or "").strip() if isinstance(cc_title, str) else "") or first(
+        "title", "position", "job_title", "current_title"
+    )
     out["company"] = first("company", "current_company", "current_company_name", "employer")
     out["location"] = first("location", "city", "country")
     followers = rec.get("followers") or rec.get("followers_count")

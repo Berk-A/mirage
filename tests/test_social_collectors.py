@@ -12,6 +12,7 @@ from research.collectors.social import (
     FacebookCollector,
     InstagramCollector,
     LinkedInCollector,
+    _normalise_platform_record,
 )
 from research.collectors.web import FetchResult
 from research.collectors.website import WebsiteCollector
@@ -126,6 +127,56 @@ def test_social_collector_uses_disk_cache(tmp_path):
     second = coll.collect(seed)  # should hit the cache, not re-scrape
     assert len(first) == 1 and len(second) == 1
     assert calls == ["https://www.linkedin.com/in/jmuth"]  # scraped exactly once
+
+
+# A trimmed-but-faithful sample of a REAL Bright Data `linkedin_person_profile` record
+# (captured live 2026-11-22). Locks in the actual field names so the normaliser mapping is
+# regression-protected without a billed live scrape.
+_REAL_LI_RAW = {
+    "id": "satyanadella",
+    "name": "Satya Nadella",
+    "position": "Chairman and CEO at Microsoft",
+    "current_company": {"name": "Microsoft", "company_id": "microsoft",
+                        "title": "Chairman and CEO"},
+    "current_company_name": "Microsoft",
+    "city": "Redmond, Washington, United States",
+    "location": "Redmond",
+    "about": "As chairman and CEO of Microsoft...",
+    "followers": 12333652,
+    "url": "https://il.linkedin.com/in/Satyanadella",
+    "input_url": "https://www.linkedin.com/in/satyanadella",
+    "posts": [
+        {"id": "1", "title": "My annual letter: Building the frontier ecosystem",
+         "attribution": "Below is my annual letter...", "created_at": "2026-10-21T00:00:00.000Z",
+         "link": "https://www.linkedin.com/pulse/annual-letter"},
+    ],
+}
+
+
+def test_normalise_real_linkedin_record_maps_actual_field_names():
+    rec = _normalise_platform_record("linkedin", _REAL_LI_RAW, "https://x/in/satyanadella")
+    assert rec["name"] == "Satya Nadella"
+    assert rec["title"] == "Chairman and CEO"          # from current_company.title (clean)
+    assert rec["company"] == "Microsoft"               # from current_company.name
+    assert rec["url"] == "https://www.linkedin.com/in/satyanadella"  # input_url preferred
+    assert rec["followers"] == 12333652
+    assert rec["posts"][0]["created_at"].startswith("2026-10-21")
+
+
+def test_real_linkedin_record_flows_to_role_and_dated_hook():
+    """The full chain on a real-shape record: normalise → collect → extract → facts."""
+    collector = LinkedInCollector(lambda p, u: _normalise_platform_record("linkedin",
+                                  _REAL_LI_RAW, u), rate_limiter=_no_wait_rl(), cache_dir=None)
+    seed = target_seed("satya", "Satya Nadella", linkedin="satyanadella")
+    provider = GraphResearchProvider((seed,), (collector,), as_of="2026-11-22")
+    dossier = provider.get_dossier("satya")
+    preds = {f.predicate for f in dossier.facts}
+    assert "role_is" in preds and "works_at" in preds and "engaged_with" in preds
+    assert dossier.role == "Chairman and CEO"
+    assert dossier.archetype == "executive_founder"
+    hook = next(f for f in dossier.facts if f.predicate == "engaged_with" and f.event_date)
+    assert hook.event_date == "2026-10-21"             # created_at → dated recency hook
+    assert provider.verify(dossier.hooks[0].detail, target_id="satya")
 
 
 # --------------------------------------------------------------------------- #
