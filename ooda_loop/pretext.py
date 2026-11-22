@@ -28,14 +28,20 @@ from core.models import Dossier, PretextWorld
 # transaction wins — a Co-Founder & CTO gets a technical evaluation, not an RFP, even though
 # "founder" would otherwise catch them.
 _ROLE_KINDS: tuple[tuple[tuple[str, ...], str], ...] = (
-    (("product", "cpo"), "beta_onboarding"),
+    # Business authority first: a (co-)CEO / managing director is a buyer, not a design
+    # partner — a group-wide RFP is the transaction they cannot ignore, even when their
+    # remit is product. (Tom is "Co-Founder & Co-CEO (product)": he must get an RFP, not a
+    # beta.) A pure product lead with no executive title still falls through to beta below.
+    (("ceo", "chief executive", "co-ceo", "managing director",
+      "general manager", "geschäftsführ"), "rfp_portal"),
+    (("product", "cpo", "head of product"), "beta_onboarding"),
     (("cto", "chief technology", "engineering", "technical", "architect",
       "developer", "it-leiter", "head of it"), "tech_eval"),
     (("hr", "people", "recruit", "talent", "personal"), "candidate_portal"),
     (("cfo", "finance", "controlling"), "rfp_portal"),
     (("marketing", "communications", "pr "), "event_registration"),
-    (("ceo", "chief executive", "sales", "commercial", "business", "founder",
-      "managing director", "general manager", "revenue", "growth"), "rfp_portal"),
+    (("sales", "commercial", "business", "founder",
+      "revenue", "growth"), "rfp_portal"),
 )
 DEFAULT_KIND = "rfp_portal"
 
@@ -199,13 +205,29 @@ _WORLDS_BY_KIND: dict[str, tuple[PretextWorld, ...]] = {
 }
 
 
-def world_for(dossier: Dossier, *, salt: str = "", kind: Optional[str] = None) -> PretextWorld:
+# Stable order the pivot walks when a world isn't landing. The role-matched kind is tried
+# FIRST (pivot 0); each further pivot steps to the next transaction family, so a silent
+# target gets a genuinely different ask rather than another world in the same family.
+_KIND_ORDER: tuple[str, ...] = tuple(_WORLDS_BY_KIND)
+
+
+def world_for(dossier: Dossier, *, salt: str = "", kind: Optional[str] = None,
+              pivot: int = 0) -> PretextWorld:
     """Pick the session's pretext world: transaction kind from the target's role, the
     specific world chosen deterministically from (target, salt) so one session is always
-    self-consistent while different runs diversify."""
-    kind = kind or kind_for_role(dossier.role)
-    worlds = _WORLDS_BY_KIND.get(kind) or _WORLDS_BY_KIND[DEFAULT_KIND]
-    digest = hashlib.sha256(f"{dossier.target_id}|{salt}|{kind}".encode()).digest()
+    self-consistent while different runs diversify.
+
+    ``pivot`` cycles the transaction FAMILY when a world isn't landing (ACTION_SEQUENCE
+    §T2): pivot 0 is the role-matched kind, and each increment moves to the next family in
+    ``_KIND_ORDER``. Pivoting only applies when ``kind`` is role-derived — an explicit
+    ``kind`` is honoured as given. The pivot also feeds the digest, so a different family
+    also yields a different specific world."""
+    base = kind or kind_for_role(dossier.role)
+    if kind is None and pivot:
+        order = (base,) + tuple(k for k in _KIND_ORDER if k != base)
+        base = order[pivot % len(order)]
+    worlds = _WORLDS_BY_KIND.get(base) or _WORLDS_BY_KIND[DEFAULT_KIND]
+    digest = hashlib.sha256(f"{dossier.target_id}|{salt}|{base}|{pivot}".encode()).digest()
     return worlds[digest[0] % len(worlds)]
 
 

@@ -300,7 +300,20 @@ class ModelDirector:
         # EVERY touch — so a registration, a document and a diligence question all come from the
         # same persona and never contradict each other (the insider-leak that broke the RFP
         # thread). World facts travel on spec.world; we never ship KG-grounded target claims here.
-        world = world_for(dossier, salt=state.session_id)
+        # ...and pivots the transaction FAMILY when that world isn't landing (ACTION_SEQUENCE
+        # §T2): while the target has NEVER replied, step to a different family every 2 silent
+        # touches; the moment any world earns a reply the pivot freezes on the family that
+        # worked, so a converting thread is never abandoned. A single silent world no longer
+        # dooms a target (Tom got silence and the engine never tried a different ask).
+        if not any((r or "") not in ("", "(silence)") for _, _, r in state.thread):
+            streak = 0
+            for _, _, r in reversed(state.thread):
+                if (r or "") in ("", "(silence)"):
+                    streak += 1
+                else:
+                    break
+            state.world_pivots = streak // 2
+        world = world_for(dossier, salt=state.session_id, pivot=state.world_pivots)
         sender = Sender(name=world.persona_name, address=world.persona_address,
                         rationale=f"{world.persona_role} at {world.org}")
         claims: tuple[Claim, ...] = ()

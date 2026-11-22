@@ -6,6 +6,7 @@ from content.llm import FakeLLM
 from core.models import Dossier, Hook, Incident, Objective, Sender, Signals, Vendor
 from ooda_loop.decider import ASYNC_SILENT_CHANNELS, INTERACTIVE_CHANNELS
 from ooda_loop.director import ModelDirector
+from ooda_loop.pretext import world_for
 from ooda_loop.state import LoopState
 
 DOSSIER = Dossier(
@@ -90,6 +91,27 @@ def test_director_action_plan_gets_a_declared_attachment():
     m = ModelDirector(FakeLLM(responses=[_plan(objective="action")])).decide(_state(), DOSSIER).move
     assert m.objective is Objective.ACTION
     assert m.attachment and m.attachment.endswith(".pdf")
+
+
+def test_director_pivots_world_family_after_sustained_silence():
+    # A world that only draws silence should not be repeated forever: after two silent touches
+    # the engine steps to a DIFFERENT transaction family (ACTION_SEQUENCE §T2).
+    st = _state()
+    st.thread = [("email", "hi", "(silence)")] * 4          # four silent touches
+    m = ModelDirector(FakeLLM(responses=[_plan()])).decide(st, DOSSIER).move
+    assert st.world_pivots == 2                             # a pivot every 2 silent touches
+    assert m.world is not None
+    assert m.world.kind != world_for(DOSSIER, salt="s1", pivot=0).kind   # a new family
+
+
+def test_director_freezes_world_pivot_once_engaged():
+    # The moment any world earns a reply, the pivot freezes on the family that worked — a
+    # converting thread is never reset back to the first world.
+    st = _state()
+    st.thread = [("email", "hi", "(silence)"), ("email", "hi again", "sure, what is this about?")]
+    st.world_pivots = 1                                     # had already pivoted while silent
+    ModelDirector(FakeLLM(responses=[_plan()])).decide(st, DOSSIER)
+    assert st.world_pivots == 1                             # frozen, not recomputed to 0
 
 
 def test_director_threads_reply_only_on_an_engaged_channel():

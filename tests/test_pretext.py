@@ -20,6 +20,25 @@ def test_role_maps_to_a_transaction_kind():
     assert kind_for_role("") == "rfp_portal"            # default
 
 
+def test_executive_authority_outranks_a_product_remit():
+    # Tom is a Co-CEO whose remit is product. His executive authority wins: a buyer gets an
+    # RFP, not a design-partner beta (the wrong-transaction miss that left him silent).
+    assert kind_for_role("Co-Founder & Co-CEO (product)") == "rfp_portal"
+    assert kind_for_role("Co-CEO, product and design") == "rfp_portal"
+    # ...but a product lead with no executive title is still a beta design partner.
+    assert kind_for_role("Head of Product") == "beta_onboarding"
+
+
+def test_world_pivot_cycles_the_transaction_family_on_silence():
+    d = _dossier("Co-Founder & Co-CEO (product)")        # role kind: rfp_portal
+    base = world_for(d, salt="s", pivot=0)
+    assert base.kind == "rfp_portal"                      # pivot 0 is the role-matched family
+    seen = {world_for(d, salt="s", pivot=p).kind for p in range(5)}
+    assert len(seen) >= 3                                 # successive pivots reach other families
+    # an EXPLICIT kind is honoured regardless of pivot (no accidental drift)
+    assert world_for(d, salt="s", kind="tech_eval", pivot=3).kind == "tech_eval"
+
+
 def test_world_is_deterministic_and_self_consistent():
     d = _dossier("CTO")
     w1 = world_for(d, salt="s1")

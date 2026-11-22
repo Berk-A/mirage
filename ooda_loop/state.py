@@ -85,6 +85,10 @@ class LoopState:
     # re-engaging), and how many times we've nudged a quiet one before rotating away.
     ever_engaged: set[str] = field(default_factory=set)
     reengage_nudges: int = 0
+    # Transaction-family pivot: how many times the pretext world has shifted to a DIFFERENT
+    # family because the current one drew only silence. The Director advances this on a
+    # sustained silent streak and freezes it once any world earns a reply (see pretext.world_for).
+    world_pivots: int = 0
     # Story-time clock: anchor + minutes elapsed. The decider stamps each contact with
     # `story_time` and advances the clock so touches don't all land at once.
     story_start: datetime = field(default_factory=_story_anchor)
