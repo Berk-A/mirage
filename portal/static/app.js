@@ -152,14 +152,23 @@ function twinCard(t) {
 }
 
 function sessionRow(r, active) {
+  const flag = r.unconfirmed
+    ? `<span class="flag-tag" title="Heuristic flagged ${esc(r.flagged)}; the API returned no confirming event.">flagged ${esc(r.flagged)}</span>`
+    : "";
   return `<tr class="clickable ${active ? "active" : ""}" data-run="${esc(r.run)}" data-target="${esc(r.persona)}">
     <td><span class="runid">${esc(r.persona_name)}</span></td>
     <td><span class="run-path">${esc(r.run)}</span></td>
     <td>${esc(r.channel)}</td>
     <td class="num">${r.turns}</td>
     <td class="num"><span class="skp ${skpClass(r.skepticism)}">${pct(r.skepticism)}</span></td>
-    <td><span class="out"><span class="dot" style="background:${OUT_COLORS[r.outcome]}"></span>${OUT_LABEL[r.outcome]}</span></td>
+    <td><span class="out"><span class="dot" style="background:${OUT_COLORS[r.outcome]}"></span>${OUT_LABEL[r.outcome]}${flag}</span></td>
   </tr>`;
+}
+
+function auditNote(a) {
+  if (!a || !a.unconfirmed) return "";
+  const s = a.unconfirmed > 1 ? "s" : "";
+  return `<p class="hint" style="margin-top:var(--s3)">${a.unconfirmed} heuristic flag${s} not API-confirmed (public facts, refusals or questions) — counted as <b>no win</b>. Wins require <span class="mono">page.submitted</span> with a secret, <span class="mono">attachment.opened</span>, or a volunteered non-public fact.</p>`;
 }
 
 function renderDashboard(ov) {
@@ -181,7 +190,7 @@ function renderDashboard(ov) {
     ${statCards(ov.cards)}
     <div class="grid c2-60-40 mb">
       <div class="card"><h2>Skepticism per run</h2><p class="sub">% skeptical at session end</p>${areaChart(ov.skepticism_series)}</div>
-      <div class="card"><h2>Outcomes</h2><p class="sub">Objective reached per run</p>${donut(ov.outcomes, ov.cards.win_rate)}</div>
+      <div class="card"><h2>Outcomes</h2><p class="sub">API-confirmed objective per run</p>${donut(ov.outcomes, ov.cards.win_rate)}${auditNote(ov.audit)}</div>
     </div>
     <div class="grid c2-40-60 mb">
       <div class="card"><h2>Skepticism per AI twin</h2><p class="sub">Per-target dossier, skepticism &amp; win rate</p>${twins}</div>
@@ -229,6 +238,7 @@ async function loadReplay(run, target) {
       <div class="tile"><div class="k">Skepticism</div><div class="v">${pct(rep.skepticism)}</div></div>
     </div>
     ${rep.sender ? `<div class="sender">sender: ${esc(rep.sender)}</div>` : ""}
+    ${rep.unconfirmed ? `<p class="hint" style="margin-bottom:var(--s3)">Heuristic flagged <b>${esc(rep.flagged)}</b>, but the API returned no confirming event — not counted as a win.</p>` : ""}
     <div>${steps || `<div class="empty">No touches logged.</div>`}</div>`;
 }
 

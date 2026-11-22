@@ -46,6 +46,35 @@ except Exception:  # noqa: BLE001
     )
 STRATEGY_KEYS = tuple(k for k, _ in STRATEGIES)
 
+# The API-grounded grader: the summary.json `incident` field is the live reader's keyword
+# heuristic, which false-fires (it labels public-fact citations, refusals and questions as
+# "disclosure" wins). The target API only confirms a win via its event types
+# (page.submitted with a secret / attachment.opened / a reply volunteering a non-public
+# fact), so the portal re-derives every outcome from the real events instead of trusting
+# the heuristic label. See mab_experiments/grading.py and docs/target-api.md.
+try:  # pragma: no cover - import glue
+    from mab_experiments.grading import confirmed_incident as _confirmed_incident
+    _HAS_GRADER = True
+except Exception:  # noqa: BLE001
+    _HAS_GRADER = False
+
+
+def api_confirmed_outcome(events) -> Optional[str]:
+    """API-grounded outcome id (credentials|disclosure|action) or None, from real events.
+
+    Falls back to None (unconfirmed) if the grader package is unavailable — never trusts
+    the heuristic label silently."""
+    if not _HAS_GRADER:
+        return None
+    try:
+        o = _confirmed_incident(events or [])
+    except Exception:  # noqa: BLE001
+        return None
+    if o is None:
+        return None
+    return getattr(o, "value", str(o))
+
+
 _OUTCOME_RANK = {"silent": 0, "suspicious": 1, "engaged": 2, "incident": 3}
 # Incident labels the loop emits map onto the four donut outcomes the design shows.
 _INCIDENT_OUTCOMES = ("credentials", "disclosure", "action")
@@ -135,6 +164,12 @@ def _end_skepticism(touches: list[dict]) -> float:
     return float(vals[-1]) if vals else 0.0
 
 
+def _session_events(run: pathlib.Path, target: str) -> list[dict]:
+    """Every real API event the target returned across a session's touches (<target>.jsonl)."""
+    touches = [r for r in load_jsonl(run / f"{target}.jsonl") if r.get("kind") == "touch"]
+    return [e for t in touches for e in (t.get("events") or []) if isinstance(e, dict)]
+
+
 # --------------------------------------------------------------------------- #
 # Sessions — one flattened row per (run dir, target), the unit the design calls a "run"
 # --------------------------------------------------------------------------- #
@@ -164,7 +199,9 @@ def sessions() -> list[dict]:
             touches = row.get("touches") or []
             channel = next((t.get("channel") for t in touches if t.get("channel")), "—")
             skn = _end_skepticism(touches)
-            outcome = _outcome_of(row.get("incident"))
+            # Truth = API-confirmed from real events; `incident` is the heuristic flag.
+            confirmed = api_confirmed_outcome(_session_events(run, target))
+            flagged = _outcome_of(row.get("incident"))
             dn = (dossiers.get(target) or {}).get("display_name") or target
             out.append({
                 "id": f"{run.name}::{target}",
@@ -175,8 +212,10 @@ def sessions() -> list[dict]:
                 "channel": channel,
                 "turns": row.get("contacts") or len(touches),
                 "skepticism": round(skn, 4),
-                "outcome": outcome,
-                "won": outcome != "none",
+                "outcome": confirmed or "none",          # API-confirmed outcome
+                "won": confirmed is not None,
+                "flagged": flagged,                       # heuristic label (may be none)
+                "unconfirmed": bool(flagged != "none" and confirmed is None),
                 "stop_reason": row.get("stop_reason") or "",
                 "seconds": row.get("seconds"),
             })
@@ -265,6 +304,12 @@ def overview(persona: Optional[str] = None, channel: Optional[str] = None) -> di
         "twins": twins,
         "channel_objectives": channel_objectives,
         "session_log": rows,
+        "audit": {
+            "flagged": sum(1 for r in rows if r["flagged"] != "none"),
+            "confirmed": sum(1 for r in rows if r["won"]),
+            "unconfirmed": sum(1 for r in rows if r.get("unconfirmed")),
+            "grader": _HAS_GRADER,
+        },
         "personas": _persona_options(allrows, dossiers),
         "channels": sorted({r["channel"] for r in allrows if r["channel"] and r["channel"] != "—"}),
         "has_data": bool(allrows),
@@ -339,6 +384,9 @@ def session_replay(run_name: str, target: str) -> Optional[dict]:
     primary_channel = next((t.get("channel") for t in touches if t.get("channel")), "—")
     first_sender = next((t.get("sender_addr") or t.get("sender") for t in touches
                          if (t.get("sender_addr") or t.get("sender"))), "")
+    events = [e for t in touches for e in (t.get("events") or []) if isinstance(e, dict)]
+    confirmed = api_confirmed_outcome(events)
+    flagged = _outcome_of((srow or {}).get("incident"))
     return {
         "run": run_name,
         "target": target,
@@ -347,8 +395,10 @@ def session_replay(run_name: str, target: str) -> Optional[dict]:
         "channel": primary_channel,
         "duration": _fmt_duration((srow or {}).get("seconds")),
         "skepticism": _end_skepticism(stouches),
-        "outcome": _outcome_of((srow or {}).get("incident")),
-        "won": bool((srow or {}).get("won")),
+        "outcome": confirmed or "none",               # API-confirmed
+        "won": confirmed is not None,
+        "flagged": flagged,                            # heuristic label (may be none)
+        "unconfirmed": bool(flagged != "none" and confirmed is None),
         "stop_reason": (srow or {}).get("stop_reason") or "",
         "sender": first_sender,
         "timeline": timeline,
