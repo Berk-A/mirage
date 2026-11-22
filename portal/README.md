@@ -31,6 +31,33 @@ MIRAGE_RUNS_DIR=/path/to/revel8/runs .venv/bin/python -m portal.server --port 80
 Default (no env) is `runs/` next to the repo root. The status banner at the top of the page
 shows which directory is being read and how many run dirs were found.
 
+### Fresh clone shows real data
+
+A curated snapshot of run artifacts is committed to the repo, so **a fresh clone renders a
+populated dashboard with no setup** — just `python3 -m portal.server` and open the page. Only
+the slice the portal reads is tracked: per-run `summary.json`, the `<target>.jsonl` session
+threads, `<target>_dossier.json`, and `strategy_ledger.json` (~780K). The rest of `runs/` —
+`osint_cache`, `llm_extract_cache`, raw `conversation_*.jsonl` logs, journals, model
+artifacts (~235M) — stays git-ignored. Set `MIRAGE_RUNS_DIR` to override the snapshot with
+your own runs.
+
+The snapshot is **point-in-time**: new runs produced after it was committed won't appear
+until you refresh it. To refresh from a checkout where runs were produced:
+
+```bash
+# from repo root; SRC = a runs/ dir that has the fresh artifacts
+SRC=/path/to/revel8/runs
+rsync -am \
+  --include='*/' \
+  --include='*/summary.json' --include='*/*_dossier.json' --include='*/*.jsonl' \
+  --include='strategy_ledger.json' --exclude='*' \
+  "$SRC"/ runs/
+git add -f runs/ && git commit -m "Portal: refresh committed run snapshot"
+```
+
+The `rsync` filter copies only the portal-relevant files (it skips the caches and raw logs);
+`git add -f` is needed because `runs/` is git-ignored.
+
 ## What binds to what
 
 | UI section | Backend source |
