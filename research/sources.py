@@ -75,6 +75,16 @@ class Seed:
     # Public pages that a plain fetch can't reach (JS-rendered / bot-blocked), routed
     # through the Bright Data Web Unlocker collector. Same extraction as `urls`.
     unlock_urls: tuple[str, ...] = ()
+    # Public social-profile handles or URLs, routed through the structured-scraper
+    # collectors (research/collectors/social.py). A handle ("jmuth") or a full profile
+    # URL both work — the collector normalises them to the platform's profile URL.
+    linkedin: tuple[str, ...] = ()
+    facebook: tuple[str, ...] = ()
+    instagram: tuple[str, ...] = ()
+    # Personal / company websites (arbitrary pages). The WebsiteCollector tries a polite
+    # plain fetch first and falls back to the Bright Data scraper on a block, so a
+    # JS-rendered or bot-blocked personal site is still reached.
+    websites: tuple[str, ...] = ()
 
 
 class RobotsCache:

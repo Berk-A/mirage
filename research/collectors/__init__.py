@@ -10,7 +10,15 @@ from .brightdata import BrightDataCollector, brightdata_available
 from .brave import BraveSearchCollector
 from .feeds import FeedCollector
 from .github import GitHubCollector
+from .social import (
+    FacebookCollector,
+    InstagramCollector,
+    LinkedInCollector,
+    SocialProfileCollector,
+    social_available,
+)
 from .web import HttpFetcher, WebCollector
+from .website import WebsiteCollector
 
 __all__ = [
     "WebCollector",
@@ -20,4 +28,10 @@ __all__ = [
     "BrightDataCollector",
     "brightdata_available",
     "BraveSearchCollector",
+    "SocialProfileCollector",
+    "LinkedInCollector",
+    "FacebookCollector",
+    "InstagramCollector",
+    "social_available",
+    "WebsiteCollector",
 ]

@@ -74,6 +74,80 @@ PRACTICE_SEEDS: tuple[Seed, ...] = (
 SEEDS_BY_ID = {s.target_id: s for s in PRACTICE_SEEDS}
 
 
+def _as_tuple(value) -> tuple[str, ...]:
+    """Accept a single string, an iterable of strings, or None → a clean str tuple.
+
+    Lets the factory be called with either `linkedin="in/jmuth"` or
+    `linkedin=("in/jmuth", ...)` without the caller worrying about wrapping.
+    """
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        value = (value,)
+    out: list[str] = []
+    for item in value:
+        item = str(item).strip()
+        if item and item not in out:
+            out.append(item)
+    return tuple(out)
+
+
+def _derive_aliases(name: str, extra=()) -> tuple[str, ...]:
+    """First name, last name, and any explicit extras — the hooks entity resolution
+    uses to tie 'Julius', 'Muth' and 'Julius Muth' to the same person."""
+    parts = [p for p in (name or "").split() if len(p) > 2]
+    return tuple(dict.fromkeys([*parts, *_as_tuple(extra)]))
+
+
+def target_seed(
+    target_id: str,
+    name: str,
+    *,
+    role: str = "",
+    company: str = "",
+    urls=(),
+    github=(),
+    domains=(),
+    feeds=(),
+    aliases=(),
+    colleagues=(),
+    unlock_urls=(),
+    linkedin=(),
+    facebook=(),
+    instagram=(),
+    websites=(),
+) -> Seed:
+    """Build a research `Seed` for an ARBITRARY target from whatever public entry points
+    you have — a name plus any handles, profile URLs and a personal site — instead of the
+    hardcoded practice roster. Every list input accepts a bare string or an iterable, and
+    aliases are auto-derived from the name (explicit `aliases` are added on top).
+
+    Example:
+        seed = target_seed("ada", "Ada Lovelace", company="Analytical Engines",
+                           linkedin="in/adalovelace", instagram="ada.builds",
+                           websites="https://ada.example")
+        provider = default_provider(seeds=(seed,))
+        dossier = provider.get_dossier("ada")
+    """
+    return Seed(
+        target_id=target_id,
+        name=name,
+        role=role,
+        company=company,
+        urls=_as_tuple(urls),
+        github=_as_tuple(github),
+        domains=_as_tuple(domains),
+        feeds=_as_tuple(feeds),
+        aliases=_derive_aliases(name, aliases),
+        colleagues=_as_tuple(colleagues),
+        unlock_urls=_as_tuple(unlock_urls),
+        linkedin=_as_tuple(linkedin),
+        facebook=_as_tuple(facebook),
+        instagram=_as_tuple(instagram),
+        websites=_as_tuple(websites),
+    )
+
+
 def seeds_from_scenario(scenario: Scenario) -> tuple[Seed, ...]:
     """Build target seeds from the roster returned by the challenge API.
 
@@ -105,6 +179,10 @@ def seeds_from_scenario(scenario: Scenario) -> tuple[Seed, ...]:
             aliases=aliases,
             colleagues=colleagues or (known.colleagues if known else ()),
             unlock_urls=known.unlock_urls if known else (),
+            linkedin=known.linkedin if known else (),
+            facebook=known.facebook if known else (),
+            instagram=known.instagram if known else (),
+            websites=known.websites if known else (),
         ))
     return tuple(out)
 
@@ -121,9 +199,13 @@ def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = 
     from research.collectors import (
         BraveSearchCollector,
         BrightDataCollector,
+        FacebookCollector,
         FeedCollector,
         GitHubCollector,
+        InstagramCollector,
+        LinkedInCollector,
         WebCollector,
+        WebsiteCollector,
         brightdata_available,
     )
     from research.pipeline import GraphResearchProvider
@@ -134,7 +216,13 @@ def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = 
     if use_brightdata is None:
         use_brightdata = brightdata_available()
     if use_brightdata:
+        # All four Bright Data-backed collectors share the same backend gate as the Web
+        # Unlocker, so offline / no-key runs add none of them and stay identical.
         collectors.append(BrightDataCollector())
+        collectors.append(WebsiteCollector())
+        collectors.append(LinkedInCollector())
+        collectors.append(FacebookCollector())
+        collectors.append(InstagramCollector())
     return GraphResearchProvider(
         PRACTICE_SEEDS if seeds is None else seeds, collectors, as_of=as_of
     )
