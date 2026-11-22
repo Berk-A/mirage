@@ -37,14 +37,57 @@ class RecordingClient:
     """Wraps a TargetClient; logs each send_message (body + events) to a JSONL. Every other
     method is delegated unchanged so the OODA loop behaves exactly as in production."""
 
-    def __init__(self, inner, log_path: str) -> None:
+    def __init__(self, inner, log_path: str, *, verbose: bool = False,
+                 target: str = "") -> None:
         self.inner = inner
         self._log = open(log_path, "a", encoding="utf-8", errors="backslashreplace", newline="\n")
         self.touch = 0
+        self.verbose = verbose
+        self.target = target
 
     def _w(self, rec: dict) -> None:
         self._log.write(json.dumps(rec, ensure_ascii=False) + "\n")
         self._log.flush()
+
+    # -- live terminal transcript (what we write / what we get back) ---------- #
+    @staticmethod
+    def _wrap(text: str, indent: str = "     ") -> str:
+        import textwrap
+        text = (text or "").strip() or "(empty)"
+        out = []
+        for para in text.splitlines() or [""]:
+            out.extend(textwrap.wrap(para, width=92, initial_indent=indent,
+                                     subsequent_indent=indent) or [indent + ""])
+        return "\n".join(out)
+
+    def _show_message(self, *, channel, sender, sender_addr, subject, body, page, events):
+        if not self.verbose:
+            return
+        who = f"{sender or '?'}" + (f" <{sender_addr}>" if sender_addr else "")
+        print(f"\n┏━ touch {self.touch} · {self.target or '?'} · {channel} · {who}", flush=True)
+        if subject:
+            print(f"┃  subject: {subject}", flush=True)
+        print("┃  ▶ WE WRITE:", flush=True)
+        print(self._wrap(body, "┃     "), flush=True)
+        if page is not None:
+            fields = ",".join(getattr(page, "fields", ()) or ())
+            print(f"┃     [+ landing page: {getattr(page, 'url', '')}  fields: {fields}]",
+                  flush=True)
+        replies = [e for e in events if (e.type.value == "reply" and (e.body or "").strip())]
+        if replies:
+            print("┃  ◀ THEY REPLY:", flush=True)
+            for e in replies:
+                print(self._wrap(e.body, "┃     "), flush=True)
+        else:
+            print("┃  ◀ (silence — no reply)", flush=True)
+        other = [e for e in events if e.type.value != "reply"]
+        if other:
+            tags = []
+            for e in other:
+                f = ",".join(e.fields) if e.fields else ""
+                tags.append(f"{e.type.value}" + (f"({f})" if f else ""))
+            print(f"┃  ⚑ events: {'  '.join(tags)}", flush=True)
+        print("┗" + "━" * 60, flush=True)
 
     def new_session(self, scenario_id: str = "practice"):
         s = self.inner.new_session(scenario_id)
@@ -92,6 +135,11 @@ class RecordingClient:
                        for e in res.events],
             "touches_used": res.touches_used,
         })
+        self._show_message(channel=message.channel,
+                           sender=getattr(message.sender, "name", None),
+                           sender_addr=getattr(message.sender, "address", None),
+                           subject=message.subject, body=message.body,
+                           page=message.page, events=res.events)
         return res
 
     def start_conversation(self, session_id: str, *, to: str, channel: str, sender=None,
@@ -102,6 +150,12 @@ class RecordingClient:
                  "conversation_id": result.conversation_id, "to": to,
                  "channel": channel, "sent_at": sent_at,
                  "persona_says": result.persona_says})
+        if self.verbose:
+            print(f"\n┏━ live {channel} · {self.target or to} — conversation opens", flush=True)
+            if result.persona_says:
+                print("┃  ◀ THEY SAY:", flush=True)
+                print(self._wrap(result.persona_says, "┃     "), flush=True)
+            print("┗" + "━" * 60, flush=True)
         return result
 
     def say_turn(self, conversation_id: str, text: str, *, idempotency_key=None,
@@ -115,6 +169,17 @@ class RecordingClient:
                  "events": [{"type": e.type.value, "url": e.url,
                              "fields": list(e.fields), "values": dict(e.values)}
                             for e in result.events]})
+        if self.verbose:
+            print("┃  ▶ WE SAY:", flush=True)
+            print(self._wrap(text, "┃     "), flush=True)
+            if result.persona_says:
+                print("┃  ◀ THEY SAY:", flush=True)
+                print(self._wrap(result.persona_says, "┃     "), flush=True)
+            other = [e for e in result.events if e.type.value != "reply"]
+            if other:
+                print("┃  ⚑ events: " + "  ".join(
+                    e.type.value + (f"({','.join(e.fields)})" if e.fields else "")
+                    for e in other), flush=True)
         return result
 
     def end_conversation(self, conversation_id: str):
@@ -186,6 +251,8 @@ def main(argv=None) -> int:
                          "vendor = security-ops+trust-&-safety) as the senders")
     ap.add_argument("--brain", choices=("model", "rule"), default="model",
                     help="model = ModelDirector + ModelCritic (abliterated); rule = deterministic")
+    ap.add_argument("--verbose", "-v", action="store_true",
+                    help="print a live transcript: each message we send and the reply/events we get")
     a = ap.parse_args(argv)
 
     if not os.environ.get("REVEL8_API_KEY"):
@@ -284,7 +351,10 @@ def main(argv=None) -> int:
 
     for tgt in targets:
         _dump_dossier(kg.get_dossier(tgt, scenario_id=a.scenario), f"{out}/{tgt}_dossier.json")
-        rec = RecordingClient(api, f"{out}/{tgt}.jsonl")
+        rec = RecordingClient(api, f"{out}/{tgt}.jsonl", verbose=a.verbose, target=tgt)
+        if a.verbose:
+            print(f"\n{'='*64}\n=== {tgt} — research done, opening the campaign "
+                  f"(budget {max_contacts} touches)\n{'='*64}", flush=True)
         loop = OodaLoop(client=rec, reader=ReactionReader(disclosure_grader=grader),
                         memory=ThreeTierMemory(), dossiers=kg, renderer=renderer,
                         decider=make_decider(), grounding=kg, ledger=ledger, cast=cast)

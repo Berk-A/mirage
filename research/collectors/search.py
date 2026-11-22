@@ -51,7 +51,7 @@ class SerpApiDiscoveryCollector:
         max_queries: int = 5,
         num: int = 8,
         max_results: int = 24,
-        max_fetch: int = 2,
+        max_fetch: int = 6,
         rate_limiter: Optional[RateLimiter] = None,
     ):
         self._search = search or serpapi_search
@@ -128,8 +128,11 @@ class SerpApiDiscoveryCollector:
         # Fetch first-party company pages AND a couple of external article/interview pages —
         # the external ones are where founders say specific, non-boilerplate things, which is
         # what the LLM extractor turns into sharp hooks.
+        # External interview/press pages are where founders say specific, non-boilerplate
+        # things, so fetch them as deeply as the company pages (thorough research is worth the
+        # extra fetches here — the provenance gate filters the noise downstream).
         targets = (self._company_pages(seed, urls)[: self._max_fetch]
-                   + self._article_pages(seed, urls)[:2])
+                   + self._article_pages(seed, urls)[: max(4, self._max_fetch)])
         out: list[RawDoc] = []
         seen: set[str] = set()
         for url in targets:
