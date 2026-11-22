@@ -1,0 +1,34 @@
+[
+  {
+    "target": "julius",
+    "session": "s_8a1411ffdb",
+    "contacts": 3,
+    "won": true,
+    "incident": "credentials",
+    "stop_reason": "incident",
+    "seconds": 131.0,
+    "touches": [
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "d.kern@bruckner-automotive.de",
+        "incident": "credentials",
+        "suspicion": 0.1
+      }
+    ]
+  }
+]

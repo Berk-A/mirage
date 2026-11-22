@@ -1,0 +1,65 @@
+{
+  "target_id": "robert",
+  "display_name": "Robert Seilbeck",
+  "role": "Co-Founder & CTO, revel8",
+  "archetype": "technical_leader",
+  "hooks": [
+    {
+      "topic": "ISO 27001 certification",
+      "detail": "revel8 maintains ISO 27001 certification (an audit/compliance surface).",
+      "source_url": "confirmed:live-recon",
+      "date": "2026-11-22",
+      "confidence": 0.85
+    },
+    {
+      "topic": "Allianz",
+      "detail": "Allianz is a revel8 enterprise customer (public contact-center case).",
+      "source_url": "confirmed:live-recon",
+      "date": "2026-11-22",
+      "confidence": 0.8
+    },
+    {
+      "topic": "the recent funding round",
+      "detail": "revel8 raised €7 million.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "date": "2025-09-25",
+      "confidence": 0.55
+    },
+    {
+      "topic": "their investor Merantix Capital",
+      "detail": "revel8 is backed by Merantix Capital.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "date": "2025-09-25",
+      "confidence": 0.55
+    },
+    {
+      "topic": "their investor Fortino Capital",
+      "detail": "revel8 is backed by Fortino Capital.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "date": "2025-09-25",
+      "confidence": 0.55
+    }
+  ],
+  "senders": [
+    {
+      "name": "Julius Muth",
+      "address": "julius.muth@revel8-team.de",
+      "rationale": "Robert Seilbeck and Julius Muth both work at revel8."
+    },
+    {
+      "name": "Tom Müller",
+      "address": "tom.mueller@revel8-team.de",
+      "rationale": "Robert Seilbeck and Tom Müller both work at revel8."
+    }
+  ],
+  "vendors": [
+    {
+      "name": "STACKIT",
+      "login_url": "https://stackit.cloud"
+    },
+    {
+      "name": "GitHub",
+      "login_url": "https://github.com"
+    }
+  ]
+}

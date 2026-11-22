@@ -1,0 +1,62 @@
+[
+  {
+    "target": "robert",
+    "session": "s_d878d84b29",
+    "contacts": 7,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 138.3,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      }
+    ]
+  }
+]

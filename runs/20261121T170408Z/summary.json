@@ -1,0 +1,132 @@
+{
+  "overall": {
+    "count": 3,
+    "reliability": {
+      "ok": 1.0,
+      "refusal": 0.0,
+      "empty": 0.0,
+      "too_short": 0.0
+    },
+    "mean_regens": 0,
+    "fell_back_rate": 0.0,
+    "render_latency_ms_mean": 5355.01552800027,
+    "render_latency_ms_median": 5252.163874996768,
+    "guard_violation_rate": 0.0,
+    "sent_count": 0
+  },
+  "by_channel": {
+    "email": {
+      "count": 3,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5355.01552800027,
+      "render_latency_ms_median": 5252.163874996768,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  },
+  "by_objective": {
+    "disclosure": {
+      "count": 3,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5355.01552800027,
+      "render_latency_ms_median": 5252.163874996768,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  },
+  "by_tone": {
+    "colleague": {
+      "count": 1,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5252.163874996768,
+      "render_latency_ms_median": 5252.163874996768,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "professional": {
+      "count": 2,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5406.441354502022,
+      "render_latency_ms_median": 5406.441354502022,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  },
+  "by_with_link": {
+    "False": {
+      "count": 2,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5513.749124998867,
+      "render_latency_ms_median": 5513.749124998867,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    },
+    "True": {
+      "count": 1,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5037.548334003077,
+      "render_latency_ms_median": 5037.548334003077,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  },
+  "by_hook_index": {
+    "0": {
+      "count": 3,
+      "reliability": {
+        "ok": 1.0,
+        "refusal": 0.0,
+        "empty": 0.0,
+        "too_short": 0.0
+      },
+      "mean_regens": 0,
+      "fell_back_rate": 0.0,
+      "render_latency_ms_mean": 5355.01552800027,
+      "render_latency_ms_median": 5252.163874996768,
+      "guard_violation_rate": 0.0,
+      "sent_count": 0
+    }
+  }
+}

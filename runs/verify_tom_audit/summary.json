@@ -1,0 +1,20 @@
+[
+  {
+    "target": "tom",
+    "session": "s_1db2d14f55",
+    "contacts": 1,
+    "won": true,
+    "incident": "disclosure",
+    "stop_reason": "incident",
+    "seconds": 24.1,
+    "touches": [
+      {
+        "objective": "action",
+        "channel": "slack",
+        "sender": "m.berg@assurance-zert.de",
+        "incident": "disclosure",
+        "suspicion": 0.38
+      }
+    ]
+  }
+]

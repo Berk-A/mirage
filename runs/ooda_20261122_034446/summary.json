@@ -1,0 +1,27 @@
+[
+  {
+    "target": "robert",
+    "session": "s_ff3a35af77",
+    "contacts": 2,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 44.2,
+    "touches": [
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "julius.muth@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      }
+    ]
+  }
+]

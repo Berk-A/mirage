@@ -1,0 +1,83 @@
+[
+  {
+    "target": "julius",
+    "session": "s_7d11013e28",
+    "contacts": 10,
+    "won": false,
+    "incident": null,
+    "stop_reason": "budget_exhausted",
+    "seconds": 444.1,
+    "touches": [
+      {
+        "objective": "credentials",
+        "channel": "slack",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.38
+      },
+      {
+        "objective": "disclosure",
+        "channel": "slack",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.28
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.38
+      },
+      {
+        "objective": "disclosure",
+        "channel": "email",
+        "sender": "tom.mueller@revel8-team.de",
+        "incident": null,
+        "suspicion": 0.1
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      },
+      {
+        "objective": "credentials",
+        "channel": "email",
+        "sender": "m.reiner@auriga-retail.com",
+        "incident": null,
+        "suspicion": 0.12
+      }
+    ]
+  }
+]

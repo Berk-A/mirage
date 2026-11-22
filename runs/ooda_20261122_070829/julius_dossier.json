@@ -1,0 +1,503 @@
+{
+  "target_id": "julius",
+  "display_name": "Julius Muth",
+  "role": "Co-Founder & Co-CEO, revel8 (business and go-to-market)",
+  "archetype": "executive_founder",
+  "hooks": [
+    {
+      "topic": "ISO 27001 certification",
+      "detail": "revel8 maintains ISO 27001 certification (an audit/compliance surface).",
+      "source_url": "confirmed:live-recon",
+      "date": "2026-11-22",
+      "confidence": 0.85
+    },
+    {
+      "topic": "Allianz",
+      "detail": "Allianz is a revel8 enterprise customer (public contact-center case).",
+      "source_url": "confirmed:live-recon",
+      "date": "2026-11-22",
+      "confidence": 0.8
+    },
+    {
+      "topic": "the recent funding round",
+      "detail": "revel8 raised €7 million.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "date": "2026-11-02",
+      "confidence": 0.55
+    },
+    {
+      "topic": "their recent talk or interview",
+      "detail": "On 2026-04-28, Julius Muth and revel8 were covered by cybersecuritytalks.podbean.com: \"Building Human Resilience for Deepfake-Driven Phishing | Julius Muth | Cyber Security District Podcast | Cyber Security District\".",
+      "source_url": "https://www.linkedin.com/posts/revel8ai_cyber-security-district-podcast-with-julius-activity-7454832158440845312-sIKS",
+      "date": "2026-04-28",
+      "confidence": 0.5
+    }
+  ],
+  "senders": [
+    {
+      "name": "Robert Seilbeck",
+      "address": "robert.seilbeck@revel8-team.de",
+      "rationale": "Julius Muth and Robert Seilbeck both work at revel8."
+    },
+    {
+      "name": "Tom Müller",
+      "address": "tom.mueller@revel8-team.de",
+      "rationale": "Julius Muth and Tom Müller both work at revel8."
+    }
+  ],
+  "vendors": [
+    {
+      "name": "STACKIT",
+      "login_url": "https://stackit.cloud"
+    },
+    {
+      "name": "Trello",
+      "login_url": "https://trello.com"
+    },
+    {
+      "name": "GitHub",
+      "login_url": "https://github.com"
+    },
+    {
+      "name": "GitLab",
+      "login_url": "https://gitlab.com"
+    },
+    {
+      "name": "HuggingFace",
+      "login_url": "https://huggingface.co"
+    }
+  ],
+  "facts": [
+    {
+      "predicate": "role_is",
+      "value": "CEO",
+      "claim": "Julius Muth is CEO.",
+      "source_url": "https://www.revel8.ai/author-julius",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.7
+    },
+    {
+      "predicate": "works_at",
+      "value": "revel8",
+      "claim": "Julius Muth works at revel8.",
+      "source_url": "https://www.revel8.ai/author-julius",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-02",
+      "confidence": 0.7
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their recent talk or interview",
+      "claim": "On 2026-04-28, Julius Muth and revel8 were covered by cybersecuritytalks.podbean.com: \"Building Human Resilience for Deepfake-Driven Phishing | Julius Muth | Cyber Security District Podcast | Cyber Security District\".",
+      "source_url": "https://www.linkedin.com/posts/revel8ai_cyber-security-district-podcast-with-julius-activity-7454832158440845312-sIKS",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-04-28",
+      "confidence": 0.5
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "the company's growth",
+      "claim": "Julius Muth and revel8 were covered by de.linkedin.com: \"revel8\".",
+      "source_url": "https://de.linkedin.com/company/revel8ai",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "colleague_of",
+      "value": "Robert Seilbeck",
+      "claim": "Julius Muth and Robert Seilbeck both work at revel8.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-29",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "colleague_of",
+      "value": "Tom Müller",
+      "claim": "Julius Muth and Tom Müller both work at revel8.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-29",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "the recent funding round",
+      "claim": "revel8 raised €7 million.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-02",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Merantix Capital",
+      "claim": "revel8 is backed by Merantix Capital.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "role_is",
+      "value": "Co-founder & CEO",
+      "claim": "Julius Muth is Co-founder & CEO.",
+      "source_url": "https://www.revel8.ai/author-julius",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.7
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Accel",
+      "claim": "revel8 is backed by Accel.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor General Catalyst",
+      "claim": "revel8 is backed by General Catalyst.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Northzone",
+      "claim": "revel8 is backed by Northzone.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.55
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their investor Fortino Capital",
+      "claim": "revel8 is backed by Fortino Capital.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.55
+    },
+    {
+      "predicate": "role_is",
+      "value": "Co-founder",
+      "claim": "Julius Muth is Co-founder.",
+      "source_url": "https://www.crunchbase.com/organization/revel8-8509",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-02",
+      "confidence": 0.7
+    },
+    {
+      "predicate": "said",
+      "value": "attackers are cloning voices, manipulating employees across multiple channels, and using AI-",
+      "claim": "Julius Muth discusses how attackers are cloning voices and manipulating employees across multiple channels in a podcast.",
+      "source_url": "https://www.linkedin.com/posts/revel8ai_cyber-security-district-podcast-with-julius-activity-7454832158440845312-sIKS",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "co_founded",
+      "value": "revel8",
+      "claim": "Julius Muth is a co-founder of revel8.",
+      "source_url": "https://www.revel8.ai/blog/revel8-secures-eu7-million-to-fight-ai-powered-cyberattacks",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "works_for",
+      "value": "revel8",
+      "claim": "Julius Muth is the Co-Founder & Co-CEO of revel8 for business and go-to-market.",
+      "source_url": "https://www.whu.edu/de/news-insights/whu-magazin/artikel/why-stories-matter-revel8-cybersecurity-community/",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-04-28",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "alumnus_of",
+      "value": "WHU",
+      "claim": "Julius Muth is a WHU alum from 2020 with a MSc degree.",
+      "source_url": "https://www.whu.edu/de/news-insights/whu-magazin/artikel/why-stories-matter-revel8-cybersecurity-community/",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "role_is",
+      "value": "Founder",
+      "claim": "Julius Muth is Founder.",
+      "source_url": "https://www.crunchbase.com/person/julius-muth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.7
+    },
+    {
+      "predicate": "said",
+      "value": "latest attack techniques, from AI-powered phishing to real-time deepfake social engineering",
+      "claim": "Julius Muth is deeply immersed in the latest attack techniques, from AI-powered phishing to real-time deepfake social engineering.",
+      "source_url": "https://www.revel8.ai/author/julius-muth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "is_co_founder_of",
+      "value": "revel8",
+      "claim": "Julius Muth is the Co-Founder of revel8",
+      "source_url": "https://revel8-f04e95.webflow.io/about",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "works_on",
+      "value": "business operations and Go-To-Market",
+      "claim": "Julius Muth leads business operations and Go-To-Market at revel8",
+      "source_url": "https://revel8-f04e95.webflow.io/about",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "worked_at",
+      "value": "Celonis",
+      "claim": "Julius Muth drove international growth at Celonis",
+      "source_url": "https://revel8-f04e95.webflow.io/about",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "founded_year",
+      "value": "2024",
+      "claim": "revel8 was founded in 2024",
+      "source_url": "https://www.sans.org/profiles/julius-muth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "works_as",
+      "value": "Co-Founder and CEO at revel8",
+      "claim": "Julius Muth is Co-Founder and CEO at revel8",
+      "source_url": "https://www.revel8.ai/blog/big-branding-announcement",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "interested_in",
+      "value": "cybersecurity go-to-market strategy",
+      "claim": "Julius Muth is a recognized expert in cybersecurity go-to-market strategy",
+      "source_url": "https://www.revel8.ai/blog/big-branding-announcement",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "specializes_in",
+      "value": "positioning enterprise solutions against AI-driven phishing, deepfakes, and advanced social engineering threats",
+      "claim": "Julius Muth specializes in positioning enterprise solutions against AI-driven phishing, deepfakes, and advanced social engineering threats",
+      "source_url": "https://www.revel8.ai/blog/big-branding-announcement",
+      "observed_date": "2026-11-22",
+      "event_date": "2025-09-25",
+      "confidence": 0.6
+    },
+    {
+      "predicate": "spoke_at",
+      "value": "it-sa event",
+      "claim": "Julius Muth has a session called &#x27;it-sa insights&#x27;.",
+      "source_url": "https://revel8-f04e95.webflow.io/events",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.6
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "STACKIT",
+      "claim": "revel8 runs its production infrastructure on STACKIT (German sovereign cloud).",
+      "source_url": "https://www.revel8.ai/",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-22",
+      "confidence": 0.9
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on SoundCloud",
+      "claim": "Julius Muth is active on SoundCloud (https://soundcloud.com/julius-muth).",
+      "source_url": "https://soundcloud.com/julius-muth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Telegram",
+      "claim": "Julius Muth is active on Telegram (https://t.me/jmuth).",
+      "source_url": "https://t.me/jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Medium",
+      "claim": "Julius Muth is active on Medium (https://medium.com/@jmuth).",
+      "source_url": "https://medium.com/@jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "Trello",
+      "claim": "Julius Muth has a Trello account (under a handle they would use).",
+      "source_url": "https://trello.com/jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "GitHub",
+      "claim": "Julius Muth has a GitHub account (under a handle they would use).",
+      "source_url": "https://github.com/jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on YouTube",
+      "claim": "Julius Muth is active on YouTube (https://www.youtube.com/@jmuth/about).",
+      "source_url": "https://www.youtube.com/@jmuth/about",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Tumblr",
+      "claim": "Julius Muth is active on Tumblr (https://www.tumblr.com/jmuth).",
+      "source_url": "https://www.tumblr.com/jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Bluesky",
+      "claim": "Julius Muth is active on Bluesky (https://bsky.app/profile/jmuth.bsky.social).",
+      "source_url": "https://bsky.app/profile/jmuth.bsky.social",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on X",
+      "claim": "Julius Muth is active on X (https://twitter.com/jmuth).",
+      "source_url": "https://twitter.com/jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "GitLab",
+      "claim": "Julius Muth has a GitLab account (under a handle they would use).",
+      "source_url": "https://gitlab.com/jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "uses_tool",
+      "value": "HuggingFace",
+      "claim": "Julius Muth has a HuggingFace account (under a handle they would use).",
+      "source_url": "https://huggingface.co/jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.45
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Stack Overflow",
+      "claim": "Julius Muth is active on Stack Overflow (https://stackoverflow.com/users/filter?search=jmuth).",
+      "source_url": "https://stackoverflow.com/users/filter?search=jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on TikTok",
+      "claim": "Julius Muth is active on TikTok (https://www.tiktok.com/@jmuth).",
+      "source_url": "https://www.tiktok.com/@jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Pinterest",
+      "claim": "Julius Muth is active on Pinterest (https://www.pinterest.com/jmuth/).",
+      "source_url": "https://www.pinterest.com/jmuth/",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on LinkedIn",
+      "claim": "Julius Muth is active on LinkedIn (https://linkedin.com/in/jmuth).",
+      "source_url": "https://linkedin.com/in/jmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "their presence on Facebook",
+      "claim": "Julius Muth is active on Facebook (https://www.facebook.com/juliusmuth).",
+      "source_url": "https://www.facebook.com/juliusmuth",
+      "observed_date": "2026-11-22",
+      "event_date": null,
+      "confidence": 0.4
+    },
+    {
+      "predicate": "works_on",
+      "value": "ISO 27001 certification",
+      "claim": "revel8 maintains ISO 27001 certification (an audit/compliance surface).",
+      "source_url": "confirmed:live-recon",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-22",
+      "confidence": 0.85
+    },
+    {
+      "predicate": "engaged_with",
+      "value": "Allianz",
+      "claim": "Allianz is a revel8 enterprise customer (public contact-center case).",
+      "source_url": "confirmed:live-recon",
+      "observed_date": "2026-11-22",
+      "event_date": "2026-11-22",
+      "confidence": 0.8
+    }
+  ],
+  "gaps": [
+    "no verified event participation in the last 365 days",
+    "no verified future event schedule"
+  ],
+  "as_of": "2026-11-22",
+  "diagnostics": {
+    "collection_warnings": []
+  }
+}
