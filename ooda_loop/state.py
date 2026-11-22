@@ -71,6 +71,8 @@ class LoopState:
     # injected at session start so the Director deliberately diversifies across the 3 eval runs.
     prior_runs: str = ""
     followups_on_current: int = 0
+    message_fingerprints: set[str] = field(default_factory=set)
+    abort_reason: Optional[str] = None
     # Adaptive reorientation: per-channel first-contact outcome ("engaged"/"silent"/
     # "suspicious"), and whether we've advanced from the door-opener to the event-backed
     # ask on the open thread. Lets the decider avoid dead channels and reorient.

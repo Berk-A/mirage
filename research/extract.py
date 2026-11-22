@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from datetime import date, datetime
 from typing import Iterable, Optional
 
 from core.models import Fact
@@ -200,6 +201,10 @@ def _extract_web(doc: RawDoc, seed: Seed) -> list[Fact]:
                                claim=f"{name} and {colleague} both work at {seed.company or 'the same company'}.",
                                confidence=0.6))
 
+    # main-side: structured event facts (talks, launches, coverage).
+    if about_target or about_company:
+        facts.extend(_extract_event_facts(doc, seed))
+
     # Recent coverage / talk / launch → a clean hook. A publish date makes it a dated
     # (recency-ranked) hook; without one we still surface strong event classes, undated.
     topic = _event_class_topic(doc.title or "") or _event_class_topic(doc.text)
@@ -219,6 +224,76 @@ def _extract_web(doc: RawDoc, seed: Seed) -> list[Fact]:
         facts.extend(_investor_facts(doc, seed))
         facts.extend(_stack_facts(doc, seed))
     return facts
+
+
+def _extract_event_facts(doc: RawDoc, seed: Seed) -> list[Fact]:
+    """Extract only explicit dated attendance or scheduled-event statements.
+
+    Article publication dates do not prove that a person attended an event, so this
+    requires both a strong participation phrase and a date in the visible source text.
+    """
+    text = f"{doc.title}. {doc.text}"
+    low = text.casefold()
+    scheduled = re.search(
+        r"\b(?:will speak|will be speaking|will present|will attend|will join|"
+        r"scheduled to speak|scheduled as a speaker|will be a speaker)\b", low
+    )
+    spoke = re.search(r"\b(?:spoke at|presented at|joined the panel at)\b", low)
+    attended = re.search(r"\b(?:attended|participated in)\b", low)
+    if not scheduled and not spoke and not attended:
+        return []
+    statement = scheduled or spoke or attended
+    event_date = _explicit_date_near(text, statement)
+    if event_date is None:
+        return []
+    try:
+        event_day = date.fromisoformat(event_date)
+    except ValueError:
+        return []
+    if scheduled and event_day >= date.today():
+        predicate = "scheduled_for"
+        claim_verb = "is scheduled to speak at"
+    elif spoke:
+        predicate = "spoke_at"
+        claim_verb = spoke.group(0)
+    elif attended:
+        predicate = "attended_event"
+        claim_verb = attended.group(0)
+    else:
+        return []
+
+    event_name = _SITE_SUFFIX.sub("", (doc.title or "").strip()).strip(" -–|.")
+    if not event_name:
+        return []
+    host = _host(doc.url)
+    claim = (f"The source {host} says {seed.name} {claim_verb} "
+             f'"{event_name}" on {event_date}.')
+    return [_fact(seed, predicate, event_name, doc, claim=claim, confidence=0.75,
+                  event_date=event_date)]
+
+
+def _explicit_date_near(text: str, statement: re.Match) -> Optional[str]:
+    candidates = (
+        r"\b20\d{2}-\d{2}-\d{2}\b",
+        r"\b\d{1,2}\s+[A-Za-z]+\s+20\d{2}\b",
+        r"\b[A-Za-z]+\s+\d{1,2},?\s+20\d{2}\b",
+    )
+    formats = ("%Y-%m-%d", "%d %B %Y", "%d %b %Y", "%B %d, %Y",
+               "%B %d %Y", "%b %d, %Y", "%b %d %Y")
+    found: list[tuple[int, str]] = []
+    for pattern in candidates:
+        for match in re.finditer(pattern, text):
+            raw = match.group(0)
+            for fmt in formats:
+                try:
+                    found.append((match.start(), datetime.strptime(raw, fmt).date().isoformat()))
+                    break
+                except ValueError:
+                    continue
+    if not found:
+        return None
+    position, parsed = min(found, key=lambda item: abs(item[0] - statement.end()))
+    return parsed if abs(position - statement.end()) <= 180 else None
 
 
 def _extract_feed(doc: RawDoc, seed: Seed) -> list[Fact]:

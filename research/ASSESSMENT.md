@@ -81,16 +81,16 @@ stub with no loop change.
 
 ## 3. External APIs / infrastructure — assessment & recommendation
 
-Scale is tiny (3 practice founders + 3 hidden eval targets, a handful of pages each),
-so the rule is: **buy only what unblocks a source the rubric rewards, prefer a managed
-scraping API over self-hosting proxy+captcha+headless.**
+The scenario roster is read from the challenge API at runtime; the eval roster can vary
+and remain hidden until the scoring window opens. Keep collection limited to publicly
+accessible sources about those in-scope simulation targets.
 
 | Capability | Needed? | For which sources | Cheapest adequate option |
 |---|---|---|---|
-| **Web-search API** | **Yes (recommended)** | URL discovery — you only get a name+role | **Bright Data SERP** (already provisioned, see below) or **Brave Search API** (free 2k/mo). MVP falls back to seeded URLs + GitHub search. |
+| **Web-search API** | **Recommended** | URL discovery for newly visible scenario targets | Brave Search API; without a key, practice uses curated URLs and the graph reports its coverage gaps. |
 | **Headless browser** (Playwright/Selenium) | **Not in MVP; later, limited** | JS-rendered public pages (some talk/agenda SPAs) | **Playwright** (free). *Not* worth self-hosting against LinkedIn/IG/X — they detect headless and still require login. |
 | **Captcha solver** | **No** | — | Skip. Only if you self-host LinkedIn/IG scraping, and you shouldn't — use a scraping API that solves them internally. (If ever: CapSolver/2Captcha ≈ $1–3 / 1000.) |
-| **Rotating proxies / scraping API** | **Yes, for the blocked tier only** | LinkedIn, Instagram, X, Facebook, Cloudflare-walled pages | **Bright Data** — already installed in this environment (`brightdata`/`bdata` CLI + `brightdata-plugin:*` skills). Web Unlocker for arbitrary blocked pages; pre-built **dataset scrapers** for LinkedIn/IG/X that return structured JSON without us touching captchas/proxies. A few dollars total at this scale. |
+| **Rotating proxies / scraping API** | **Optional, for public pages only** | Public company pages that block a plain fetch | Bright Data Web Unlocker for explicitly seeded public URLs. Do not collect from access-controlled personal accounts. |
 | **GitHub API** | **Yes (no paid infra)** | repos, languages, org, activity → tools/projects | Public API; unauth 60 req/hr. Add an optional `GITHUB_TOKEN` for 5000 req/hr. |
 
 **Bottom line:**
@@ -98,10 +98,9 @@ scraping API over self-hosting proxy+captcha+headless.**
   (personal/company sites, GitHub API, RSS, talk pages) already emits a real,
   provenance-stamped `Dossier`. Collectors are written behind a `Collector` protocol so
   a Bright Data / headless backend slots in per-source with no pipeline change.
-- **To reach LinkedIn-grade targeting (recommended next):** add **Bright Data** (Web
-  Unlocker + LinkedIn/IG dataset) for the blocked tier and a **search API** for URL
-  discovery. This is the single highest-leverage upgrade for the *Targeting* 10 pts,
-  because LinkedIn is where "current projects + the people around them" actually live.
+- **For broader public coverage:** configure the search API and add reputable public
+  company, event, speaker and professional-profile URLs as results arrive. Keep source
+  dates and confidence attached; an article date alone does not prove attendance.
 - **Headless + captcha: not recommended** — higher operational cost than a managed
   scraping API and still blocked by login walls on the sites that matter.
 
@@ -112,7 +111,7 @@ company sites, GitHub (API), most conference/agenda sites, RSS/Atom feeds, YouTu
 (API), Medium/Substack blogs, Crunchbase (partial), press releases.
 
 ### Secrets / keys (placeholders added to `.env.example`, never commit real keys)
-- `BRIGHTDATA_API_KEY` — scraping API / Web Unlocker / SERP / dataset scrapers (blocked tier).
+- `BRIGHTDATA_API_KEY` — optional Web Unlocker for explicitly seeded public pages.
 - `GITHUB_TOKEN` — optional, raises GitHub rate limit 60→5000 req/hr.
 - `BRAVE_SEARCH_API_KEY` *(or `SERP_API_KEY`)` — optional web-search for URL discovery
   (or use Bright Data SERP instead).

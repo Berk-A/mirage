@@ -100,6 +100,8 @@ class Writer:
         self.llm = llm
         self.model = model
         self.temperature = temperature
+        self.last_fell_back = False
+        self.last_model_error: Optional[str] = None
 
     def write(self, spec: MoveSpec, dossier: Dossier) -> str:
         # A follow-up (thread context present) answers the target; otherwise a fresh open.
@@ -110,7 +112,10 @@ class Writer:
             {"role": "user", "content": user},
         ]
         body = self._complete(msgs)
-        return body or self._fallback(spec, dossier)
+        if body:
+            return body
+        self.last_fell_back = True
+        return self._fallback(spec, dossier)
 
     def rewrite(self, spec: MoveSpec, dossier: Dossier, draft: str,
                 issues: list[str]) -> str:
@@ -119,16 +124,24 @@ class Writer:
             {"role": "user", "content": rewrite_user_prompt(spec, dossier, draft, issues)},
         ]
         body = self._complete(msgs)
-        return body or draft or self._fallback(spec, dossier)
+        if body:
+            return body
+        if draft:
+            return draft
+        self.last_fell_back = True
+        return self._fallback(spec, dossier)
 
     def _complete(self, msgs: list[dict]) -> str:
         """One guarded model call: any transport/HTTP/timeout error or junk payload
         collapses to '' so the caller routes to the template fallback instead of raising."""
         try:
             raw = self.llm.complete(msgs, model=self.model, temperature=self.temperature)
-        except Exception:  # noqa: BLE001 — timeouts, HTTP errors, decode errors, anything
+        except Exception as exc:  # noqa: BLE001 — keep transport details out of run logs
+            self.last_model_error = type(exc).__name__
             return ""
-        return (raw or "").strip()
+        text = (raw or "").strip()
+        self.last_model_error = None if text else "empty_response"
+        return text
 
     @staticmethod
     def _fallback(spec: MoveSpec, dossier: Dossier) -> str:
@@ -219,6 +232,7 @@ class StudioRenderer:
         # it had to ship the deterministic template because the model never came clean.
         self.last_regens: int = 0
         self.last_fell_back: bool = False
+        self.last_model_error: Optional[str] = None
 
     def render(self, spec: MoveSpec, dossier: Dossier) -> RenderedMessage:
         # render() is a hard boundary: it must ALWAYS return a valid, non-empty
@@ -226,8 +240,19 @@ class StudioRenderer:
         # output is clamped; and if nothing clean survives we ship the template.
         self.last_regens = 0
         self.last_fell_back = False
+        self.last_model_error = None
+        if hasattr(self.writer, "last_fell_back"):
+            self.writer.last_fell_back = False
+        if hasattr(self.writer, "last_model_error"):
+            self.writer.last_model_error = None
 
         body = self._write(spec, dossier)
+        # Carry the writer's own fallback/error instrumentation up (main-side bookkeeping):
+        # the Writer swallows its own model errors and falls back to the template, so the
+        # renderer must read its flags to report a fallback the loop can journal.
+        self.last_fell_back = self.last_fell_back or bool(
+            getattr(self.writer, "last_fell_back", False))
+        self.last_model_error = getattr(self.writer, "last_model_error", None)
 
         # Rewrite loop driven by BOTH critics: the model critic (voice/coherence/in-character/
         # invented-facts) and the deterministic Critic (hard safety). Either one's issues send

@@ -119,7 +119,8 @@ class LLMDisclosureGrader:
     def __init__(self, llm, *, model: Optional[str] = None,
                  fallback: Optional[DisclosureGrader] = None) -> None:
         self.llm = llm
-        self.model = model
+        config = getattr(llm, "config", None)
+        self.model = model or getattr(config, "critic_model", None)
         self.fallback = fallback or HeuristicDisclosureGrader()
 
     def grade(self, reply: str, *, target_role: str = "") -> DisclosureVerdict:

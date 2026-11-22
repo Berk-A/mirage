@@ -24,6 +24,7 @@ mirage.egg-info/top_level.txt
 ooda_loop/__init__.py
 ooda_loop/client.py
 ooda_loop/decider.py
+ooda_loop/grading.py
 ooda_loop/guard.py
 ooda_loop/memory.py
 ooda_loop/orchestrator.py
@@ -39,6 +40,7 @@ research/seeds.py
 research/sources.py
 research/synthetic_kg.py
 research/collectors/__init__.py
+research/collectors/brave.py
 research/collectors/brightdata.py
 research/collectors/feeds.py
 research/collectors/github.py
@@ -46,7 +48,9 @@ research/collectors/web.py
 tests/test_client.py
 tests/test_content.py
 tests/test_decider.py
+tests/test_dynamic_scenario.py
 tests/test_foundation.py
+tests/test_grading.py
 tests/test_guard.py
 tests/test_harness.py
 tests/test_integration.py
@@ -60,3 +64,4 @@ tests/test_research.py
 tests/test_research_live.py
 tests/test_research_pipeline.py
 tests/test_synthetic_kg.py
+tests/test_tactics.py

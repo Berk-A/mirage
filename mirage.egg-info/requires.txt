@@ -14,3 +14,6 @@ trl>=0.15
 transformers>=4.46
 accelerate>=1.2
 bitsandbytes>=0.45
+
+[viewer]
+streamlit>=1.40

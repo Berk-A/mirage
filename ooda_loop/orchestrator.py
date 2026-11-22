@@ -11,8 +11,10 @@ change freely as long as it still satisfies `DossierProvider` / `GroundingProvid
 """
 from __future__ import annotations
 
+import hashlib
 import uuid
 from dataclasses import replace
+from datetime import datetime, timedelta
 from typing import Optional
 
 from core.interfaces import (
@@ -64,7 +66,12 @@ class OodaLoop:
         *,
         scenario_id: str = "practice",
         max_contacts: Optional[int] = None,
+        story_start: Optional[str | datetime] = None,
+        story_interval_minutes: int = 60,
     ) -> Transcript:
+        story_start_dt = _parse_story_start(story_start)
+        if story_interval_minutes < 1:
+            raise ValueError("story_interval_minutes must be at least 1")
         dossier = self.dossiers.get_dossier(target_id, scenario_id=scenario_id)
         if self.cast is not None:                 # multi-persona: coordinated cast as senders
             dossier = replace(dossier, senders=tuple(self.cast.senders))
@@ -92,11 +99,19 @@ class OodaLoop:
                 self.memory.journal(session.session_id, "stop", {"reason": stop_reason})
                 break
 
-            record = self._act_and_observe(state, dossier, target_id, decision)
+            record = self._act_and_observe(
+                state, dossier, target_id, decision,
+                story_start=story_start_dt,
+                story_interval_minutes=story_interval_minutes,
+            )
             if record is not None:
                 records.append(record)
                 stuck = 0
             else:
+                if state.abort_reason:
+                    stop_reason = state.abort_reason
+                    self.memory.journal(session.session_id, "stop", {"reason": stop_reason})
+                    break
                 # A guard-blocked move spends no touch; if we can never produce a valid
                 # move (e.g. a dossier whose sender is on a real-org domain), bail instead
                 # of looping forever.
@@ -119,10 +134,28 @@ class OodaLoop:
 
     # ------------------------------------------------------------------ #
     def _act_and_observe(self, state: LoopState, dossier, target_id: str,
-                         decision: Decision) -> Optional[ContactRecord]:
+                         decision: Decision, *, story_start: Optional[datetime] = None,
+                         story_interval_minutes: int = 60) -> Optional[ContactRecord]:
         spec = self._ground(decision.move, target_id)      # Act: ground claims
 
         rendered = self.renderer.render(spec, dossier)      # Act: render content
+        sent_at = None
+        if story_start is not None:
+            sent_at = (story_start + timedelta(
+                minutes=story_interval_minutes * state.contacts_used
+            )).isoformat()
+            rendered = replace(rendered, sent_at=sent_at)
+
+        fingerprint = _message_fingerprint(rendered)
+        if fingerprint in state.message_fingerprints:
+            state.abort_reason = "duplicate_render"
+            self.memory.journal(state.session_id, "duplicate_render", {
+                "channel": rendered.channel,
+                "subject": rendered.subject,
+                "renderer_fell_back": bool(getattr(self.renderer, "last_fell_back", False)),
+            })
+            return None
+
         violations = guard.check_move(spec, rendered)       # Act: rule guard
         if violations:
             self.memory.journal(state.session_id, "guard_block",
@@ -144,6 +177,7 @@ class OodaLoop:
         result = self.client.send_message(
             state.session_id, rendered, to=target_id, idempotency_key=key
         )
+        state.message_fingerprints.add(fingerprint)
 
         signals = self.reader.read(                         # Observe
             result.events,
@@ -164,10 +198,13 @@ class OodaLoop:
             "channel": spec.channel,
             "sender": spec.sender.address or spec.sender.name,
             "message_id": result.message_id,
+            "sent_at": sent_at,
             "events": [e.type.value for e in signals.events],
             "incident": signals.incident.objective.value if signals.incident else None,
             "observed_suspicion": signals.suspicion,
             "suspicion": state.suspicion,
+            "renderer_fell_back": bool(getattr(self.renderer, "last_fell_back", False)),
+            "renderer_model_error": getattr(self.renderer, "last_model_error", None),
         })
 
         if signals.incident is not None:
@@ -229,7 +266,8 @@ class OodaLoop:
                 return dossier
             logo = fetch_company_logo(company)
             if logo:
-                asset_id = self.client.upload_asset(logo[0], content_type=logo[1])
+                result = self.client.upload_asset(logo[0], content_type=logo[1])
+                asset_id = result.get("asset_id") if isinstance(result, dict) else result
                 if asset_id:
                     return replace(dossier, logo_asset_id=asset_id)
         except Exception:  # noqa: BLE001 — branding is a nicety, never fail a run for it
@@ -247,3 +285,23 @@ class OodaLoop:
             if node_id is not None:
                 kept.append(replace(claim, node_id=node_id))
         return replace(spec, claims=tuple(kept))
+
+
+def _parse_story_start(value: Optional[str | datetime]) -> Optional[datetime]:
+    if value is None:
+        return None
+    parsed = value if isinstance(value, datetime) else datetime.fromisoformat(value)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError("story_start must include a timezone offset, e.g. 2026-11-23T09:14:00+01:00")
+    return parsed
+
+
+def _message_fingerprint(message) -> str:
+    parts = (
+        message.channel or "",
+        message.subject or "",
+        " ".join((message.body or "").casefold().split()),
+        message.page.url if message.page else "",
+        "\0".join(message.page.fields) if message.page else "",
+    )
+    return hashlib.sha256("\0".join(parts).encode("utf-8")).hexdigest()

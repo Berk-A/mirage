@@ -72,6 +72,23 @@ def test_llm_grader_parses_json_verdict():
     assert v.is_disclosure and "Okta" in v.fact
 
 
+def test_llm_grader_uses_configured_critic_model():
+    class RecordingLLM:
+        config = type("Config", (), {"critic_model": "qwen-judge"})()
+
+        def __init__(self):
+            self.model = None
+
+        def complete(self, messages, *, model=None, **kwargs):
+            self.model = model
+            return '{"disclosure": false, "fact": ""}'
+
+    llm = RecordingLLM()
+    grader = LLMDisclosureGrader(llm)
+    grader.grade("That article is public.")
+    assert llm.model == "qwen-judge"
+
+
 def test_llm_grader_false_verdict():
     g = LLMDisclosureGrader(FakeLLM(responses=['{"disclosure": false, "fact": ""}']))
     assert not g.grade("the 7M is public").is_disclosure

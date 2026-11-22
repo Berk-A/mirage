@@ -52,11 +52,13 @@ class TargetClient(Protocol):
         ...
 
     def start_conversation(
-        self, session_id: str, *, to: str, channel: str, sender=None
+        self, session_id: str, *, to: str, channel: str, sender=None,
+        sent_at: Optional[str] = None,
     ) -> ConversationStart: ...
 
     def say_turn(
-        self, conversation_id: str, text: str, *, idempotency_key: Optional[str] = None
+        self, conversation_id: str, text: str, *, idempotency_key: Optional[str] = None,
+        sent_at: Optional[str] = None, attachments: Optional[Sequence[object]] = None,
     ) -> TurnResult: ...
 
     def end_conversation(self, conversation_id: str) -> None: ...

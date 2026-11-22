@@ -34,6 +34,18 @@ def test_writer_falls_back_when_model_empty():
     assert out and "confirm the room" in out.lower()
 
 
+def test_renderer_exposes_model_fallback_and_error():
+    class BrokenLLM:
+        def complete(self, *args, **kwargs):
+            raise TimeoutError("do not expose this message")
+
+    renderer = StudioRenderer(BrokenLLM())
+    message = renderer.render(spec(), DOSSIER)
+    assert message.body
+    assert renderer.last_fell_back is True
+    assert renderer.last_model_error == "TimeoutError"
+
+
 def test_critic_flags_leaks_artifacts_and_links():
     c = Critic()
     assert c.review("Hi Tom, which room on Thursday? Thanks, Lena", spec(), DOSSIER).ok

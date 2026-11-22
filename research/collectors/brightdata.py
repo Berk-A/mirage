@@ -48,7 +48,12 @@ class BrightDataCollector:
         source_type: str = "web",
         rate_limiter: Optional[RateLimiter] = None,
     ):
-        self._scrape = scrape or cli_unlocker_scrape
+        if scrape is not None:
+            self._scrape = scrape
+        elif os.environ.get("BRIGHTDATA_API_KEY"):
+            self._scrape = rest_unlocker_scrape
+        else:
+            self._scrape = cli_unlocker_scrape
         self._url_field = url_field
         self.source_type = source_type
         self._rl = rate_limiter if rate_limiter is not None else RateLimiter(min_interval=1.0)

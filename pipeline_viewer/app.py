@@ -26,7 +26,7 @@ st.set_page_config(page_title="MIRAGE pipeline viewer", layout="wide")
 
 def load_json(p: pathlib.Path):
     try:
-        return json.loads(p.read_text())
+        return json.loads(_read_text(p))
     except Exception:
         return None
 
@@ -34,13 +34,21 @@ def load_json(p: pathlib.Path):
 def load_jsonl(p: pathlib.Path) -> list[dict]:
     rows = []
     try:
-        for line in p.read_text().splitlines():
+        for line in _read_text(p).splitlines():
             line = line.strip()
             if line:
                 rows.append(json.loads(line))
     except Exception:
         pass
     return rows
+
+
+def _read_text(p: pathlib.Path) -> str:
+    """Read new UTF-8 artifacts and older Windows-code-page run files."""
+    try:
+        return p.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        return p.read_text(encoding="cp1252")
 
 
 def run_dirs() -> list[pathlib.Path]:

@@ -7,7 +7,7 @@ from core.fakes import (
     InMemoryMemory,
     ScriptedClient,
 )
-from core.models import Dossier, Event, EventType, Hook, Objective, Sender
+from core.models import Dossier, Event, EventType, Hook, Objective, RenderedMessage, Sender
 from ooda_loop.orchestrator import OodaLoop
 
 
@@ -65,6 +65,34 @@ def test_budget_exhaustion_without_incident():
     assert t.won is False
     assert t.contacts_used == 3
     assert t.stop_reason == "budget_exhausted"
+
+
+def test_duplicate_render_stops_before_a_second_touch():
+    class RepeatingRenderer:
+        def render(self, spec, dossier):
+            return RenderedMessage(channel=spec.channel, body="same body every time",
+                                   sender=spec.sender)
+
+    first_reply = Event(id="e_r", type=EventType.REPLY, channel="slack",
+                        body="Which detail do you mean?")
+    client = ScriptedClient(script=[[first_reply], []],
+                            touch_budget=5)
+    memory = InMemoryMemory()
+    loop = OodaLoop(client=client, reader=FakeSignalReader(), memory=memory,
+                    dossiers=FakeDossierProvider(), renderer=RepeatingRenderer())
+    transcript = loop.run_session("tom")
+    assert transcript.contacts_used == 1
+    assert transcript.stop_reason == "duplicate_render"
+    assert len(client.sent) == 1
+    assert any(row["kind"] == "duplicate_render" for row in transcript.journal)
+
+
+def test_story_timestamps_advance_between_contacts():
+    loop, client, _ = build_loop([[], []], touch_budget=2)
+    loop.run_session("tom", story_start="2026-11-23T09:14:00+01:00",
+                     story_interval_minutes=45)
+    sent = [row["message"].sent_at for row in client.sent]
+    assert sent == ["2026-11-23T09:14:00+01:00", "2026-11-23T09:59:00+01:00"]
 
 
 def test_grounding_drops_unverifiable_claims():

@@ -82,11 +82,10 @@ suspicion. `write_summary(rows, out_dir)` writes `summary.json`, `summary.md`, `
 
 ```bash
 # generation (NO revel8 calls): measure the cascade across the whole matrix, big N
-.venv/bin/python -m experiments.run --mode generation --limit 90
+python -m experiments.run --mode generation --limit 90
 
 # live (ONE practice session, touches capped, sleeps between sends)
-set -a; source .env; set +a
-.venv/bin/python -m experiments.run --mode live --target julius --limit 12 --sleep 1.5
+python -m experiments.run --mode live --target julius --limit 12 --sleep 1.5
 ```
 
 Flags: `--mode generation|live` (default generation), `--target julius|tom|robert`
@@ -102,5 +101,5 @@ Dependencies are wired to the real pieces: `research.synthetic_kg.SyntheticKnowl
 
 ## Tests
 
-`.venv/bin/pytest tests/test_harness.py` — no network, no model. Uses `FakeDossierProvider`,
+`python -m pytest tests/test_harness.py` — no network, no model. Uses `FakeDossierProvider`,
 a `StudioRenderer` backed by `content.llm.FakeLLM`, `FakeSignalReader` and `ScriptedClient`.

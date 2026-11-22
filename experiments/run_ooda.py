@@ -1,14 +1,13 @@
-"""Multi-touch OODA live run: the full agent loop vs the practice founders.
+"""Run the OODA loop against a challenge scenario roster.
 
 Drives `ooda_loop.OodaLoop` (Observe -> Orient -> Decide -> Act) through several touches in
 one session per target, escalating objectives (disclosure -> action -> credentials) and
-rotating channels, against the live abliterated writer, using the synthetic dossier. A
+rotating channels, using the configured writer and optional public research. A
 `RecordingClient` wraps the real `Revel8Client` so every touch's message body and the
 persona's reply/events are logged to JSONL — so we can read exactly what was said and how
 the target reacted.
 
-    set -a; source .env; set +a
-    .venv/bin/python -m experiments.run_ooda --targets julius,tom,robert --max-contacts 12
+    python -m experiments.run_ooda --scenario practice --provider real --max-contacts 5
 """
 from __future__ import annotations
 
@@ -24,12 +23,14 @@ def load_env(path: str = ".env") -> None:
     p = pathlib.Path(path)
     if not p.exists():
         return
-    for line in p.read_text().splitlines():
+    for line in p.read_text(encoding="utf-8-sig").splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         k, v = line.split("=", 1)
-        os.environ.setdefault(k.strip(), v.strip())
+        value = v.strip()
+        if value:
+            os.environ.setdefault(k.strip(), value)
 
 
 class RecordingClient:
@@ -38,7 +39,7 @@ class RecordingClient:
 
     def __init__(self, inner, log_path: str) -> None:
         self.inner = inner
-        self._log = open(log_path, "a")
+        self._log = open(log_path, "a", encoding="utf-8", errors="backslashreplace", newline="\n")
         self.touch = 0
 
     def _w(self, rec: dict) -> None:
@@ -49,6 +50,15 @@ class RecordingClient:
         s = self.inner.new_session(scenario_id)
         self._w({"kind": "session_start", "session_id": s.session_id, "scenario": scenario_id})
         return s
+
+    def list_sessions(self):
+        return self.inner.list_sessions()
+
+    def list_channels(self):
+        return self.inner.list_channels()
+
+    def upload_asset(self, file_path):
+        return self.inner.upload_asset(file_path)
 
     def get_session(self, session_id: str):
         return self.inner.get_session(session_id)
@@ -72,21 +82,40 @@ class RecordingClient:
             "sender": getattr(message.sender, "name", None),
             "sender_addr": getattr(message.sender, "address", None),
             "subject": message.subject,
+            "sent_at": message.sent_at,
             "body": message.body,
             "body_len": len(message.body or ""),
             "has_page": message.page is not None,
             "events": [{"type": e.type.value, "channel": e.channel, "url": e.url,
-                        "fields": list(e.fields), "reply": (e.body or "")[:600]}
+                        "fields": list(e.fields), "values": dict(e.values),
+                        "reply": (e.body or "")[:600]}
                        for e in res.events],
             "touches_used": res.touches_used,
         })
         return res
 
-    def start_conversation(self, session_id: str, *, to: str, channel: str, sender=None):
-        return self.inner.start_conversation(session_id, to=to, channel=channel, sender=sender)
+    def start_conversation(self, session_id: str, *, to: str, channel: str, sender=None,
+                           sent_at=None):
+        result = self.inner.start_conversation(session_id, to=to, channel=channel,
+                                               sender=sender, sent_at=sent_at)
+        self._w({"kind": "conversation_start", "session_id": session_id,
+                 "conversation_id": result.conversation_id, "to": to,
+                 "channel": channel, "sent_at": sent_at,
+                 "persona_says": result.persona_says})
+        return result
 
-    def say_turn(self, conversation_id: str, text: str, *, idempotency_key=None):
-        return self.inner.say_turn(conversation_id, text, idempotency_key=idempotency_key)
+    def say_turn(self, conversation_id: str, text: str, *, idempotency_key=None,
+                 sent_at=None, attachments=None):
+        result = self.inner.say_turn(conversation_id, text,
+                                     idempotency_key=idempotency_key,
+                                     sent_at=sent_at, attachments=attachments)
+        self._w({"kind": "conversation_turn", "conversation_id": conversation_id,
+                 "say": text, "sent_at": sent_at,
+                 "persona_says": result.persona_says,
+                 "events": [{"type": e.type.value, "url": e.url,
+                             "fields": list(e.fields), "values": dict(e.values)}
+                            for e in result.events]})
+        return result
 
     def end_conversation(self, conversation_id: str):
         return self.inner.end_conversation(conversation_id)
@@ -126,19 +155,32 @@ def _dump_dossier(d, path: str) -> None:
         "senders": [{"name": s.name, "address": s.address, "rationale": s.rationale}
                     for s in d.senders],
         "vendors": [{"name": v.name, "login_url": v.login_url} for v in d.vendors],
+        "facts": [{"predicate": f.predicate, "value": f.object_value,
+                   "claim": f.canonical_claim, "source_url": f.source_url,
+                   "observed_date": f.observed_date, "event_date": f.event_date,
+                   "confidence": f.confidence} for f in d.facts],
+        "gaps": list(d.gaps), "as_of": d.as_of,
+        "diagnostics": dict(d.raw),
     }
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(rec, f, indent=2, ensure_ascii=False)
 
 
 def main(argv=None) -> int:
     load_env()
-    ap = argparse.ArgumentParser(description="Multi-touch OODA live run vs the founders.")
-    ap.add_argument("--targets", default="julius,tom,robert")
-    ap.add_argument("--max-contacts", type=int, default=12)
+    ap = argparse.ArgumentParser(description="Run MIRAGE against a challenge API scenario.")
+    ap.add_argument("--scenario", default="practice",
+                    help="scenario id currently visible through GET /scenarios")
+    ap.add_argument("--targets", default=None,
+                    help="comma-separated ids from that scenario; defaults to its visible roster")
+    ap.add_argument("--max-contacts", type=int, default=None,
+                    help="optional lower cap; never exceeds the scenario touch budget")
+    ap.add_argument("--story-start", default=None,
+                    help="optional timezone-aware ISO timestamp, e.g. 2026-11-23T09:14:00+01:00")
+    ap.add_argument("--story-interval-minutes", type=int, default=60)
     ap.add_argument("--out-dir", default=None)
-    ap.add_argument("--provider", choices=("synthetic", "real"), default="synthetic",
-                    help="real = live OSINT GraphResearchProvider; synthetic = stub")
+    ap.add_argument("--provider", choices=("synthetic", "real"), default="real",
+                    help="real = scenario-scoped public research; synthetic = practice stub")
     ap.add_argument("--cast", choices=("none", "audit", "vendor"), default="none",
                     help="multi-persona: run a coordinated cast (audit = auditor+coordinator; "
                          "vendor = security-ops+trust-&-safety) as the senders")
@@ -148,6 +190,12 @@ def main(argv=None) -> int:
 
     if not os.environ.get("REVEL8_API_KEY"):
         print("REVEL8_API_KEY not set (source .env).")
+        return 2
+    if a.max_contacts is not None and a.max_contacts < 1:
+        print("--max-contacts must be at least 1.")
+        return 2
+    if a.story_interval_minutes < 1:
+        print("--story-interval-minutes must be at least 1.")
         return 2
 
     from content.studio import StudioRenderer
@@ -159,11 +207,25 @@ def main(argv=None) -> int:
     out = a.out_dir or f"runs/ooda_{datetime.datetime.now():%Y%m%d_%H%M%S}"
     pathlib.Path(out).mkdir(parents=True, exist_ok=True)
 
+    api = Revel8Client()
+    scenarios = api.list_scenarios()
+    scenario = next((row for row in scenarios if row.id == a.scenario), None)
+    if scenario is None:
+        print(f"Scenario {a.scenario!r} is not visible through the challenge API.")
+        return 2
+    if scenario.kind == "eval" and not scenario.open:
+        print("The eval scenario is not open yet; no session was started.")
+        return 2
+
     if a.provider == "real":
-        from research.seeds import default_provider
-        base_kg = default_provider()        # live OSINT -> GraphResearchProvider
+        from research.seeds import default_provider, seeds_from_scenario
+        seeds = seeds_from_scenario(scenario)
+        base_kg = default_provider(seeds=seeds)
         print("provider: REAL (live OSINT via GraphResearchProvider)")
     else:
+        if a.scenario != "practice":
+            print("The synthetic provider only contains practice data; use --provider real.")
+            return 2
         from research.synthetic_kg import SyntheticKnowledgeGraph
         base_kg = SyntheticKnowledgeGraph()
         print("provider: synthetic stub")
@@ -185,7 +247,28 @@ def main(argv=None) -> int:
         make_decider = Decider
         print("brain: RULE (deterministic decider + critic)")
 
-    targets = [t.strip() for t in a.targets.split(",") if t.strip()]
+    # Scenario is the authority for who is in scope and the touch budget (eval is capped at 10).
+    visible_ids = [t.id for t in scenario.targets]
+    requested_targets = ([t.strip() for t in a.targets.split(",") if t.strip()]
+                         if a.targets else visible_ids)
+    if not requested_targets:
+        print(f"Scenario {a.scenario!r} has no visible targets yet.")
+        return 2
+    unknown = sorted(set(requested_targets) - set(visible_ids))
+    if unknown:
+        print(f"Target ids are not in the visible scenario roster: {', '.join(unknown)}")
+        return 2
+
+    scenario_limit = scenario.touch_budget
+    if scenario_limit is None:
+        scenario_limit = 10 if scenario.kind == "eval" else 30
+    if scenario.kind == "eval":
+        scenario_limit = min(scenario_limit, 10)
+    max_contacts = min(scenario_limit, a.max_contacts) if a.max_contacts else scenario_limit
+    if a.max_contacts and max_contacts < a.max_contacts:
+        print(f"Capping --max-contacts at the scenario limit ({max_contacts}).")
+
+    targets = requested_targets
     results = []
 
     # Persistent cross-run ledger: survives across the 3 eval processes so the Director sees
@@ -200,13 +283,17 @@ def main(argv=None) -> int:
         print(f"cast: {a.cast} — {', '.join(s.name for s in cast.senders)}")
 
     for tgt in targets:
-        _dump_dossier(kg.get_dossier(tgt), f"{out}/{tgt}_dossier.json")  # research/KG stage
-        rec = RecordingClient(Revel8Client(), f"{out}/{tgt}.jsonl")
+        _dump_dossier(kg.get_dossier(tgt, scenario_id=a.scenario), f"{out}/{tgt}_dossier.json")
+        rec = RecordingClient(api, f"{out}/{tgt}.jsonl")
         loop = OodaLoop(client=rec, reader=ReactionReader(disclosure_grader=grader),
                         memory=ThreeTierMemory(), dossiers=kg, renderer=renderer,
                         decider=make_decider(), grounding=kg, ledger=ledger, cast=cast)
         t0 = time.time()
-        tr = loop.run_session(tgt, max_contacts=a.max_contacts)
+        tr = loop.run_session(
+            tgt, scenario_id=a.scenario, max_contacts=max_contacts,
+            story_start=a.story_start,
+            story_interval_minutes=a.story_interval_minutes,
+        )
         dt = time.time() - t0
         rec.close()
         row = {

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import date
 from difflib import SequenceMatcher
 from typing import Iterable, Optional
 
@@ -35,12 +36,17 @@ _OBJECT_TYPE = {
     "engaged_with": "Topic",
     "interested_in": "Topic",
     "spoke_at": "Event",
+    "attended_event": "Event",
+    "scheduled_for": "Event",
     "colleague_of": "Person",
     "knows": "Person",
 }
 
 # predicates whose objects are "what matters right now" (hook material)
-_HOOK_PREDICATES = {"engaged_with", "interested_in", "works_on", "spoke_at"}
+_HOOK_PREDICATES = {
+    "engaged_with", "interested_in", "works_on", "spoke_at", "attended_event",
+    "scheduled_for"
+}
 # predicates that connect the target to a person (credible-sender material)
 _PERSON_PREDICATES = {"colleague_of", "knows"}
 
@@ -128,6 +134,7 @@ class KnowledgeGraph:
     def __init__(self) -> None:
         self.g = nx.MultiDiGraph()
         self._edges: dict[str, _Edge] = {}  # semantic key -> merged edge
+        self.collection_warnings: list[str] = []
 
     # ---- build --------------------------------------------------------- #
     def add_person(self, target_id: str, *, name: str = "", role: str = "") -> None:
@@ -192,13 +199,32 @@ class KnowledgeGraph:
         return node.get("role", "")
 
     # ---- derived views ------------------------------------------------- #
-    def recent_hooks(self, target_id: str, *, limit: int = 5) -> list[Hook]:
+    def recent_hooks(self, target_id: str, *, limit: int = 5,
+                     as_of: Optional[str] = None,
+                     max_age_days: Optional[int] = None) -> list[Hook]:
         """Timestamped interest/project/event edges → current hooks, newest + most
         confident first. `detail` carries the canonical claim verbatim so the claim the
         decider ships can be grounded by `ground()`."""
         cands = [
             f for f in self.facts_for(target_id) if f.predicate in _HOOK_PREDICATES
         ]
+        if as_of and max_age_days is not None:
+            try:
+                reference = date.fromisoformat(as_of[:10])
+                fresh = []
+                for fact in cands:
+                    if not fact.event_date:
+                        continue
+                    try:
+                        age = (reference - date.fromisoformat(fact.event_date[:10])).days
+                    except ValueError:
+                        fresh.append(fact)
+                        continue
+                    if age <= max_age_days:  # future-dated events remain eligible
+                        fresh.append(fact)
+                cands = fresh
+            except ValueError:
+                pass  # an invalid reference date must not discard otherwise useful facts
         cands.sort(key=lambda f: (f.event_date or "", f.confidence), reverse=True)
         hooks: list[Hook] = []
         seen: set[str] = set()

@@ -13,6 +13,7 @@ from .accounts import (
     maigret_available,
 )
 from .brightdata import BrightDataCollector, brightdata_available
+from .brave import BraveSearchCollector
 from .feeds import FeedCollector
 from .github import GitHubCollector
 from .search import SerpApiDiscoveryCollector, serpapi_available
@@ -31,4 +32,5 @@ __all__ = [
     "MaigretCollector",
     "holehe_available",
     "maigret_available",
+    "BraveSearchCollector",
 ]
