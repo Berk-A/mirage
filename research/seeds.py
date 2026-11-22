@@ -71,7 +71,39 @@ PRACTICE_SEEDS: tuple[Seed, ...] = (
     ),
 )
 
-SEEDS_BY_ID = {s.target_id: s for s in PRACTICE_SEEDS}
+# Eval roster seeds. The scenario gives name + role only (no scenario-level company), so we
+# seed the company per id — this scopes the search queries AND feeds the company-corroboration
+# gate that kills namesake hallucinations. Jonas is a revel8 employee, so the revel8 public
+# pages and founder colleagues apply; Patrick (VC) and Titus (founder) are external, so their
+# URLs are left to live discovery rather than guessed.
+EVAL_SEEDS: tuple[Seed, ...] = (
+    Seed(
+        target_id="jonas",
+        name="Jonas Haas",
+        role="Head of Customer Operations, revel8",
+        company=COMPANY,
+        aliases=("Jonas", "Haas"),
+        urls=_COMPANY_URLS,
+        colleagues=("Julius Muth", "Tom Müller", "Robert Seilbeck"),
+        unlock_urls=_COMPANY_UNLOCK_URLS,
+    ),
+    Seed(
+        target_id="patrick",
+        name="Patrick Hermann",
+        role="Partner & DACH VC Lead, Fortino Ventures (Munich)",
+        company="Fortino Ventures",
+        aliases=("Patrick", "Hermann"),
+    ),
+    Seed(
+        target_id="titus",
+        name="Titus von Pachelbel-Gehag",
+        role="Founder & CEO, DialedIn (B2B sales recruiting, Berlin)",
+        company="DialedIn",
+        aliases=("Titus", "Pachelbel", "Gehag", "Pachelbel-Gehag", "von Pachelbel-Gehag"),
+    ),
+)
+
+SEEDS_BY_ID = {s.target_id: s for s in (*PRACTICE_SEEDS, *EVAL_SEEDS)}
 
 
 def _as_tuple(value) -> tuple[str, ...]:

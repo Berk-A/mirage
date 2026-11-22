@@ -34,9 +34,17 @@ _ROLE_KINDS: tuple[tuple[tuple[str, ...], str], ...] = (
     # beta.) A pure product lead with no executive title still falls through to beta below.
     (("ceo", "chief executive", "co-ceo", "managing director",
       "general manager", "geschäftsführ"), "rfp_portal"),
+    # Investors/VCs: a live co-investment deal in their thesis, not a supplier RFP. Checked
+    # before the generic buyer roles but after CEO (a founder-CEO stays an RFP buyer).
+    (("vc", "venture", "investor", "general partner", "principal",
+      "capital partner", "dealflow", "deal flow", "angel invest"), "deal_room"),
     (("product", "cpo", "head of product"), "beta_onboarding"),
     (("cto", "chief technology", "engineering", "technical", "architect",
       "developer", "it-leiter", "head of it"), "tech_eval"),
+    # Customer-operations / CX / support leads: a role-fitting tool pilot. After tech_eval so an
+    # "IT Operations" lead still gets a technical evaluation.
+    (("customer operations", "customer success", "customer experience",
+      "head of support", "service desk", "support operations"), "cx_platform"),
     (("hr", "people", "recruit", "talent", "personal"), "candidate_portal"),
     (("cfo", "finance", "controlling"), "rfp_portal"),
     (("marketing", "communications", "pr "), "event_registration"),
@@ -196,12 +204,66 @@ def _candidate_worlds() -> tuple[PretextWorld, ...]:
     )
 
 
+def _dealroom_worlds() -> tuple[PretextWorld, ...]:
+    # For investors/VCs: the transaction they cannot ignore is a live co-investment allocation
+    # in their own thesis. Registering on the deal room to see the memo/data room is the natural
+    # next step of reviewing a deal — not a security action.
+    return (
+        PretextWorld(
+            kind="deal_room",
+            org="Hanseatic Co-Invest", domain="hanseatic-coinvest.com", city="Hamburg",
+            persona_name="Clara Ostermann", persona_role="Principal, Syndicate Lead",
+            persona_address="c.ostermann@hanseatic-coinvest.com",
+            transaction="co-investment allocation in the Series A of Lumen Robotics (Munich, "
+                        "DACH B2B SaaS) — €2.4M of the €18M round is carved out for the syndicate",
+            reference="LUM-A-SYND", deadline="allocations close 5 December 2026",
+            facts=(
+                "Hanseatic Co-Invest runs invite-only co-investment syndicates for European early-stage B2B SaaS",
+                "Lumen Robotics is a Munich workflow-automation company at €3.1M ARR growing ~3x YoY, led by a returning founder",
+                "The Series A is €18M led by a tier-1 fund; €2.4M is open to the co-invest syndicate at the same terms and valuation",
+                "The full data room — deck, cap table, ARR bridge, cohort retention and customer references — sits on the deal-room portal",
+                "Access is per firm: register on the deal room to unlock the memo and reserve an allocation before it is oversubscribed",
+                "The round is ~70% circled and the DACH syndicate carve-out is first-come",
+            ),
+            registration_url="https://dealroom.hanseatic-coinvest.com/register",
+            site_url="https://hanseatic-coinvest.com/about",
+        ),
+    )
+
+
+def _cx_worlds() -> tuple[PretextWorld, ...]:
+    # For customer-operations / CX / support leads: a role-congruent tool pilot. Registering on
+    # the partner portal to join the pilot is the natural next step, not a security action.
+    return (
+        PretextWorld(
+            kind="cx_platform",
+            org="Signalwork", domain="signalwork.io", city="Berlin",
+            persona_name="Nina Falk", persona_role="Head of Partnerships",
+            persona_address="nina.falk@signalwork.io",
+            transaction="Signalwork early-access pilot — an AI support-operations layer that "
+                        "auto-triages tickets and flags SLA and churn risk, offered to 10 ops teams",
+            reference="SW-PILOT-27", deadline="the pilot cohort closes 10 December 2026",
+            facts=(
+                "Signalwork is a 25-person Berlin SaaS building a support-operations layer for B2B customer teams",
+                "The pilot connects read-only to your helpdesk and returns triage, SLA-risk and churn-risk signals within two weeks",
+                "Pilot teams get a dedicated solutions engineer, a 50% first-year discount and a direct line into the roadmap",
+                "Onboarding runs through the partner portal: register, then the solutions engineer books a 30-minute scoping call",
+                "The cohort is capped at 10 customer-operations teams and 7 seats were taken this week",
+            ),
+            registration_url="https://partners.signalwork.io/pilot",
+            site_url="https://signalwork.io/about",
+        ),
+    )
+
+
 _WORLDS_BY_KIND: dict[str, tuple[PretextWorld, ...]] = {
     "rfp_portal": _rfp_worlds(),
     "event_registration": _event_worlds(),
     "beta_onboarding": _beta_worlds(),
     "tech_eval": _tech_eval_worlds(),
     "candidate_portal": _candidate_worlds(),
+    "deal_room": _dealroom_worlds(),
+    "cx_platform": _cx_worlds(),
 }
 
 

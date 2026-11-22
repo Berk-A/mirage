@@ -20,6 +20,20 @@ def test_role_maps_to_a_transaction_kind():
     assert kind_for_role("") == "rfp_portal"            # default
 
 
+def test_eval_roster_roles_map_to_fitting_worlds():
+    # The three eval targets each get a role-congruent transaction (one try per person).
+    assert kind_for_role("Partner & DACH VC Lead, Fortino Ventures (Munich)") == "deal_room"
+    assert kind_for_role("Head of Customer Operations, revel8") == "cx_platform"
+    # A founder-CEO is still an RFP buyer, not routed to the investor deal room.
+    assert kind_for_role("Founder & CEO, DialedIn (B2B sales recruiting, Berlin)") == "rfp_portal"
+    # An IT Operations lead is still a technical evaluation, not the CX pilot.
+    assert kind_for_role("Head of IT Operations") == "tech_eval"
+    # Both new worlds carry the secret field (a credentials win on submit).
+    for role in ("VC Partner", "Head of Customer Success"):
+        w = world_for(_dossier(role), salt="x")
+        assert "password" in build_transaction_page(w).fields
+
+
 def test_executive_authority_outranks_a_product_remit():
     # Tom is a Co-CEO whose remit is product. His executive authority wins: a buyer gets an
     # RFP, not a design-partner beta (the wrong-transaction miss that left him silent).
