@@ -58,6 +58,9 @@ _CHANNELS = {
     # trust accelerator when a thread stalls or a fence is declared.
     "phone_call", "video_call", "teams_call", "live_chat",
 }
+# Live, turn-by-turn channels: pure conversation, so a move on one carries no page,
+# link, attachment or subject (those are for async channels).
+LIVE_CHANNELS = {"phone_call", "video_call", "teams_call", "live_chat"}
 
 DIRECTOR_SYSTEM = (
     "You are the strategist (\"Director\") inside MIRAGE, an agent for the AUTHORIZED revel8 "
