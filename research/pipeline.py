@@ -8,7 +8,7 @@ same `Dossier`/`Fact` types, no loop change.
 """
 from __future__ import annotations
 
-from typing import Iterable, Optional, Sequence
+from typing import Callable, Iterable, Optional, Sequence
 
 from core.models import Dossier, Fact
 from research.catalog import ResearchCatalog
@@ -119,11 +119,15 @@ class GraphResearchProvider:
         *,
         as_of: Optional[str] = None,
         llm=None,
+        extra_facts_for: Optional[Callable[[str], Iterable[Fact]]] = None,
     ):
         self._seeds = {s.target_id: s for s in seeds}
         self._collectors = list(collectors)
         self._as_of = as_of
         self._llm = llm      # optional model for LLM-based fact extraction (gated + cached)
+        # Curated, verified ties (research/confirmed.py) merged into each target's graph before
+        # the dossier is derived — the 'sift & link' intel the open crawl can't reliably reach.
+        self._extra_facts_for = extra_facts_for
         self._graphs: dict[str, KnowledgeGraph] = {}
         self._dossiers: dict[str, Dossier] = {}
 
@@ -164,6 +168,10 @@ class GraphResearchProvider:
             raise KeyError(f"no seed for target_id {target_id!r}")
         seed = self._seeds[target_id]
         graph = build_graph(seed, self._collectors, llm=self._llm)
+        if self._extra_facts_for is not None:
+            extra = list(self._extra_facts_for(target_id) or ())
+            if extra:
+                graph.add_facts(extra)   # verified ties -> dossier hooks/vendors below
         self._graphs[target_id] = graph
         self._dossiers[target_id] = build_dossier(
             seed, self._collectors, as_of=self._as_of, graph=graph, llm=self._llm

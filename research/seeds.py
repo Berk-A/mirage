@@ -126,4 +126,9 @@ def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = 
             llm = OpenAICompatLLM()
         except Exception:
             llm = None
-    return GraphResearchProvider(PRACTICE_SEEDS, collectors, as_of=as_of, llm=llm)
+
+    # Curated, verified operational ties (STACKIT / ISO 27001 / Allianz) — impersonation
+    # surfaces the open crawl can't reliably reach, grounded in confirmed recon.
+    from research.confirmed import confirmed_facts
+    return GraphResearchProvider(PRACTICE_SEEDS, collectors, as_of=as_of, llm=llm,
+                                 extra_facts_for=confirmed_facts)
