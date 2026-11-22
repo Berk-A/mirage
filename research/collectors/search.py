@@ -125,9 +125,14 @@ class SerpApiDiscoveryCollector:
     def _deep_fetch(self, seed: Seed, urls: list[str]) -> list[RawDoc]:
         if self._max_fetch <= 0:
             return []
+        # Fetch first-party company pages AND a couple of external article/interview pages —
+        # the external ones are where founders say specific, non-boilerplate things, which is
+        # what the LLM extractor turns into sharp hooks.
+        targets = (self._company_pages(seed, urls)[: self._max_fetch]
+                   + self._article_pages(seed, urls)[:2])
         out: list[RawDoc] = []
         seen: set[str] = set()
-        for url in self._company_pages(seed, urls)[: self._max_fetch]:
+        for url in targets:
             if url in seen:
                 continue
             seen.add(url)
@@ -151,6 +156,29 @@ class SerpApiDiscoveryCollector:
                 )
             )
         return out
+
+    def _article_pages(self, seed: Seed, urls: list[str]) -> list[str]:
+        """Discovered EXTERNAL pages (not the company site, not LinkedIn/redirects) — press,
+        interviews, podcasts, profiles — the full-text sources the extractor mines for sharp,
+        specific hooks. Interview/press-ish URLs first."""
+        tokens = _company_tokens(seed)
+        out: list[str] = []
+        for url in urls:
+            host = urlparse(url).netloc.lower()
+            if (not host or "linkedin." in host or "/jobs" in url
+                    or any(tok in host for tok in tokens)):
+                continue
+            out.append(url)
+        key = ("interview", "podcast", "press", "news", "profile", "founder", "story",
+               "feature", "blog", "/p/", "medium.", "techcrunch", "tech.eu")
+        out.sort(key=lambda u: (not any(k in u.lower() for k in key), len(u)))
+        seen: set[str] = set()
+        ordered = []
+        for u in out:
+            if u not in seen:
+                seen.add(u)
+                ordered.append(u)
+        return ordered
 
     def _company_pages(self, seed: Seed, urls: list[str]) -> list[str]:
         """Discovered URLs on the company's own domain(s), best pages first."""

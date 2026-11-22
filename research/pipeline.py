@@ -17,8 +17,10 @@ from research.graph import KnowledgeGraph
 from research.sources import Collector, Seed, today_iso
 
 
-def build_graph(seed: Seed, collectors: Sequence[Collector]) -> KnowledgeGraph:
-    """Run every collector, extract facts, and load them into a resolved graph."""
+def build_graph(seed: Seed, collectors: Sequence[Collector], *, llm=None) -> KnowledgeGraph:
+    """Run every collector, extract facts, and load them into a resolved graph. When an `llm`
+    is given, also run LLM extraction over each fetched document for richer, specific facts
+    (gated + cached; absent -> only the regex extractor runs, unchanged)."""
     graph = KnowledgeGraph()
     graph.add_person(seed.target_id, name=seed.name, role=seed.role)
     facts: list[Fact] = []
@@ -28,6 +30,13 @@ def build_graph(seed: Seed, collectors: Sequence[Collector]) -> KnowledgeGraph:
         except Exception:
             docs = []  # a dead source must never sink the whole run
         facts.extend(extract_all(docs, seed))
+        if llm is not None:
+            from research.llm_extract import extract_facts_cached
+            for d in docs:
+                try:
+                    facts.extend(extract_facts_cached(d, seed, llm))
+                except Exception:
+                    pass  # a bad doc/model call must never sink the run
     graph.add_facts(facts)
     return graph
 
@@ -38,10 +47,11 @@ def build_dossier(
     *,
     as_of: Optional[str] = None,
     graph: Optional[KnowledgeGraph] = None,
+    llm=None,
 ) -> Dossier:
     """Produce the research deliverable for one target from public data."""
     as_of = as_of or today_iso()
-    graph = graph if graph is not None else build_graph(seed, collectors)
+    graph = graph if graph is not None else build_graph(seed, collectors, llm=llm)
 
     hooks = graph.recent_hooks(seed.target_id)
     senders = graph.credible_senders(seed.target_id)
@@ -108,10 +118,12 @@ class GraphResearchProvider:
         collectors: Sequence[Collector],
         *,
         as_of: Optional[str] = None,
+        llm=None,
     ):
         self._seeds = {s.target_id: s for s in seeds}
         self._collectors = list(collectors)
         self._as_of = as_of
+        self._llm = llm      # optional model for LLM-based fact extraction (gated + cached)
         self._graphs: dict[str, KnowledgeGraph] = {}
         self._dossiers: dict[str, Dossier] = {}
 
@@ -151,8 +163,8 @@ class GraphResearchProvider:
         if target_id not in self._seeds:
             raise KeyError(f"no seed for target_id {target_id!r}")
         seed = self._seeds[target_id]
-        graph = build_graph(seed, self._collectors)
+        graph = build_graph(seed, self._collectors, llm=self._llm)
         self._graphs[target_id] = graph
         self._dossiers[target_id] = build_dossier(
-            seed, self._collectors, as_of=self._as_of, graph=graph
+            seed, self._collectors, as_of=self._as_of, graph=graph, llm=self._llm
         )

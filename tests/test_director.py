@@ -96,3 +96,28 @@ def test_director_threads_reply_only_on_an_engaged_channel():
     # a fresh channel the target never engaged carries no stale prior reply
     m2 = ModelDirector(FakeLLM(responses=[_plan(channel="whatsapp")])).decide(st, DOSSIER).move
     assert m2.prior_reply is None
+
+
+# --------------------------------------------------------------------------- #
+# Thin-research fallback: when intel is weak, use universal-susceptibility approaches
+# --------------------------------------------------------------------------- #
+def test_director_thin_research_switches_to_universal_mode():
+    thin = Dossier(target_id="x", display_name="X", role="Engineer",
+                   hooks=(Hook(topic="public thing", detail="public", confidence=0.3),),
+                   senders=())
+    llm = FakeLLM(responses=[_plan(sender="IT Service Desk", hook="public thing")])
+    st = LoopState(dossier=thin, session_id="s", budget=10)
+    m = ModelDirector(llm).decide(st, thin).move
+    user = llm.calls[0][1]["content"]
+    assert "RESEARCH IS THIN" in user and "lever" in user.lower()
+    assert m.sender.name == "IT Service Desk"       # a proposed generic identity, used name-only
+
+
+def test_director_rich_research_anchors_on_hooks():
+    rich = Dossier(target_id="x", display_name="X", role="CEO",
+                   hooks=(Hook("their investor Merantix", "backed by Merantix", confidence=0.55),
+                          Hook("the recent funding round", "raised 7M", confidence=0.55)),
+                   senders=(Sender("Julius Muth", "julius@revel8-team.de"),))
+    llm = FakeLLM(responses=[_plan()])
+    ModelDirector(llm).decide(LoopState(dossier=rich, session_id="s", budget=10), rich)
+    assert "RESEARCH IS RICH" in llm.calls[0][1]["content"]

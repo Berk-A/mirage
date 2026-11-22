@@ -111,6 +111,7 @@ class ModelDirector:
         ranked = sorted(dossier.hooks, key=lambda h: h.confidence, reverse=True)
         strong = [h for h in ranked if h.confidence >= 0.5][:6]
         weak = [h for h in ranked if h.confidence < 0.5][:6]
+        thin = len(strong) < 2   # not enough sharp, specific intel to run a tailored pretext
         hooks = "GROUNDED hooks — anchor the pretext on one of these (real, sourced):\n" + (
             "\n".join(f"  - {h.topic}: {(h.detail or h.topic)[:120]}" for h in strong)
             or "  (none)")
@@ -136,11 +137,26 @@ class ModelDirector:
             convo = "  (no contact yet — this is the COLD OPEN)"
         tried = ", ".join(sorted(state.channels_tried)) or "none"
 
+        if thin:
+            mode = (
+                "RESEARCH IS THIN — we have no sharp, specific intel on this person. Do NOT lean "
+                "on the generic/public hooks (a stranger reciting public facts reads as spam and "
+                "gets declined). Instead use a STANDARD approach: adopt a plausible generic role "
+                "(an IT/security desk, a vendor they'd plausibly use, a recruiter, a journalist, "
+                "an industry peer) and a UNIVERSAL lever — authority, curiosity, reciprocity, "
+                "helpfulness, or scarcity. Open low-commitment and let their reaction reveal which "
+                "lands; VARY the role/lever across touches to probe. Put the chosen role in `sender`."
+            )
+        else:
+            mode = ("RESEARCH IS RICH — anchor the pretext on a specific grounded hook above and "
+                    "be personal and precise; that specificity is your edge.")
+
         return (
             f"TARGET: {dossier.display_name or dossier.target_id}, {dossier.role} "
             f"(archetype: {dossier.archetype}).\n\n"
-            f"WHAT WE KNOW (use these, stay grounded — do NOT invent facts):\n"
-            f"hooks (candidate angles):\n{hooks}\n"
+            f"APPROACH: {mode}\n\n"
+            f"WHAT WE KNOW (stay grounded — do NOT invent facts):\n"
+            f"{hooks}\n"
             f"tools/vendors they use (credential surfaces): {vendors}\n"
             f"sender identities available:\n{senders}\n"
             f"facts: {facts}\n\n"
@@ -224,10 +240,13 @@ class ModelDirector:
         return f"open a warm conversation about {topic}"
 
     def _pick_sender(self, dossier: Dossier, name) -> Sender:
-        want = str(name or "").lower().strip()
-        for s in dossier.senders:
-            if want and (want in s.name.lower() or s.name.lower() in want):
+        want = str(name or "").strip()
+        low = want.lower()
+        for s in dossier.senders:                      # a known credible identity (rich mode)
+            if low and (low in s.name.lower() or s.name.lower() in low):
                 return s
+        if want:                                       # a proposed generic role (thin mode):
+            return Sender(name=want[:60], address="")  # use it name-only (guard-safe, no domain)
         return self.fallback._pick_sender(dossier)
 
     @staticmethod

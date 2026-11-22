@@ -71,7 +71,8 @@ PRACTICE_SEEDS: tuple[Seed, ...] = (
 SEEDS_BY_ID = {s.target_id: s for s in PRACTICE_SEEDS}
 
 
-def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = None):
+def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = None,
+                     use_llm: bool | None = None):
     """A `GraphResearchProvider` over the practice seeds.
 
     Open-tier collectors always run. The Bright Data Web Unlocker collector is added when
@@ -111,4 +112,18 @@ def default_provider(as_of: str | None = None, *, use_brightdata: bool | None = 
         collectors.append(HoleheCollector())
     if maigret_available():
         collectors.append(MaigretCollector())
-    return GraphResearchProvider(PRACTICE_SEEDS, collectors, as_of=as_of)
+
+    # LLM-based extraction over the crawled docs — the real research depth. Gated on a served
+    # model (MIRAGE_LLM_BASE); absent -> only the regex extractor runs, so offline tests are
+    # unchanged. Cached per source URL, so a rebuild doesn't re-spend model calls.
+    import os
+    llm = None
+    if use_llm is None:
+        use_llm = bool(os.environ.get("MIRAGE_LLM_BASE"))
+    if use_llm:
+        try:
+            from content.llm import OpenAICompatLLM
+            llm = OpenAICompatLLM()
+        except Exception:
+            llm = None
+    return GraphResearchProvider(PRACTICE_SEEDS, collectors, as_of=as_of, llm=llm)
