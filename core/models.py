@@ -180,6 +180,10 @@ class Signals:
     submitted_page: bool = False
     opened_attachment: bool = False
     suspicion: float = 0.0
+    # The reply's classified intent — the counter-move signal the Decider/Director routes
+    # on ("" when no reply): diligence_questions | identity_probe | record_probe |
+    # verification_demand | scope_fence | compliance | deferral | refusal | neutral.
+    intent: str = ""
     notes: str = ""
 
     @property
@@ -227,6 +231,49 @@ class Vendor:
 
 
 @dataclass(frozen=True)
+class PretextWorld:
+    """The pretext bible: one coherent FICTIONAL world (org, people, transaction) the
+    campaign operates from for a session. Every invented fact lives here so all touches
+    stay consistent — the Writer answers diligence questions from this and nothing else.
+    Fabricate the world AROUND the target freely; facts ABOUT the target never live here
+    (those are KG-grounded Claims). Deterministic per session salt."""
+
+    kind: str                 # transaction kind: rfp_portal | event_registration | ...
+    org: str                  # fictional organisation name
+    domain: str               # its (registerable, fictional) domain
+    city: str = ""
+    persona_name: str = ""    # our identity in this world
+    persona_role: str = ""
+    persona_address: str = "" # email on `domain`
+    transaction: str = ""     # what is on the table, e.g. "RFP-2026-118: security awareness, 4,200 seats"
+    reference: str = ""       # a concrete id (RFP no., event code) — concreteness is credibility
+    deadline: str = ""        # the time-pressure anchor, e.g. "12 December 2026"
+    facts: tuple[str, ...] = ()   # world facts the Writer may state (scope, process, people)
+    registration_url: str = ""    # the transaction page (fields incl. a secret)
+    site_url: str = ""            # the informational proof page (org/team site)
+
+    def sender(self, rationale: str = "") -> "Sender":
+        return Sender(name=self.persona_name, address=self.persona_address,
+                      rationale=rationale or f"{self.persona_role} at {self.org} ({self.kind} pretext world)")
+
+    def bible_text(self) -> str:
+        """The world rendered as a prompt block — the ONLY source of world facts."""
+        lines = [
+            f"YOUR ORGANISATION: {self.org} ({self.city}) — domain {self.domain}",
+            f"YOUR IDENTITY: {self.persona_name}, {self.persona_role} <{self.persona_address}>",
+            f"THE TRANSACTION ON THE TABLE: {self.transaction}" + (f" (reference {self.reference})" if self.reference else ""),
+            f"DEADLINE: {self.deadline}",
+        ]
+        if self.facts:
+            lines.append("WORLD FACTS you may state (and ONLY these — if asked something not "
+                         "covered here, promise to follow up; NEVER invent a new world fact):")
+            lines += [f"  - {f}" for f in self.facts]
+        if self.registration_url:
+            lines.append(f"THE ASK happens at: {self.registration_url}")
+        return "\n".join(lines)
+
+
+@dataclass(frozen=True)
 class Fact:
     """One source-backed synthetic or consented fact; a graph edge."""
 
@@ -267,10 +314,17 @@ class Dossier:
 @dataclass(frozen=True)
 class Claim:
     """A factual assertion the message will make, tied to a knowledge-graph node so
-    it can be grounded before it ships."""
+    it can be grounded before it ships.
+
+    `world=True` marks a claim about OUR OWN fictional pretext world (the org, event
+    or transaction we invented). World claims are checked for consistency against the
+    pretext bible, NOT grounded in the target knowledge graph — they are fictional by
+    design. Claims about the target (world=False, the default) must ground in the KG
+    or be dropped (the wrong-facts penalty protects this)."""
 
     text: str
     node_id: Optional[str] = None
+    world: bool = False
 
 
 @dataclass(frozen=True)
@@ -304,6 +358,16 @@ class MoveSpec:
     # verification chain across personas — the mechanic that answers a target's provenance
     # demand ("who are you coordinating with / who is my contact"). None = a single-persona move.
     corroborator: Optional["Sender"] = None
+    # Which landing page the renderer builds for `url`: "" (default) = the generic login
+    # page; "registration" = the pretext-world transaction page (vendor/RFP/event/beta
+    # signup — the business-normal ask); "proof" = an informational artifact (org/team
+    # site) fabricated on demand to answer a verification demand.
+    page_kind: str = ""
+    # The fictional pretext world this move operates inside (ooda_loop.pretext.world_for). It
+    # carries the org/persona/transaction/facts so the Writer can frame the business-normal ask
+    # and ANSWER diligence questions concretely, and the page builders can render the
+    # transaction/proof page. None = no fictional world (a plain KG-grounded move).
+    world: Optional["PretextWorld"] = None
 
 
 @dataclass(frozen=True)

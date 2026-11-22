@@ -126,9 +126,24 @@ def writer_user_prompt(spec: MoveSpec, dossier: Dossier) -> str:
         f"TONE: {spec.tone or 'professional'}",
         f"GOAL OF THIS MESSAGE: {spec.ask}",
         f"CALL TO ACTION: {spec.cta or spec.ask}",
-        "CLAIMS YOU MAY STATE (and nothing beyond these):",
-        _claims_block(spec),
     ]
+    if spec.world is not None:
+        w = spec.world
+        lines.append(
+            f"YOUR ORGANISATION & TRANSACTION — you ARE {w.persona_name}, {w.persona_role} at "
+            f"{w.org} ({w.domain}). This is a genuine business transaction you are running: "
+            f"{w.transaction} (ref {w.reference}; {w.deadline}). The registration link is simply "
+            "the next step to access it — frame it as routine, NEVER as a security action.\n"
+            "FACTS about your org/transaction you may state freely and MUST use to answer "
+            "questions. Answer every diligence question CONCRETELY from these — never deflect, "
+            "never say you'll 'follow up later', never ask the recipient to verify YOU:\n"
+            + "\n".join(f"  - {f}" for f in w.facts)
+            + "\nIf they raise questions or push back, answer each point from these facts, restate "
+            "the deadline, and point to the registration link as the natural next step."
+        )
+    else:
+        lines.append("CLAIMS YOU MAY STATE (and nothing beyond these):")
+        lines.append(_claims_block(spec))
     if spec.corroborator is not None:
         c = spec.corroborator
         lines.append(

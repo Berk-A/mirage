@@ -26,6 +26,7 @@ from core.models import (
 )
 from content.llm import LLM, OpenAICompatLLM
 from content.pages import build_email_html, build_login_page
+from content.transactions import build_proof_page, build_transaction_page
 from content.prompts import (
     WRITER_SYSTEM,
     followup_user_prompt,
@@ -294,7 +295,11 @@ class StudioRenderer:
 
         page = None
         try:
-            if spec.url:
+            if spec.world is not None and spec.page_kind == "proof":
+                page = build_proof_page(spec.world, logo_asset_id=logo)
+            elif spec.world is not None:            # the transactional registration play
+                page = build_transaction_page(spec.world, logo_asset_id=logo)
+            elif spec.url:
                 page = build_login_page(spec, dossier, logo_asset_id=logo)
         except Exception:  # noqa: BLE001
             page = None

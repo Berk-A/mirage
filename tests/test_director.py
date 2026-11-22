@@ -74,11 +74,16 @@ def test_director_respects_hard_stops():
     assert ModelDirector(FakeLLM(responses=[_plan()])).decide(st3, DOSSIER).reason == "too_suspicious"
 
 
-def test_director_credentials_plan_gets_lookalike_url():
+def test_director_credentials_plan_is_a_transactional_world():
+    # The winning play: credentials is a business-normal registration inside a fictional world,
+    # not a 'verify your account' login (ACTION_SEQUENCE P0-1).
     m = ModelDirector(FakeLLM(responses=[_plan(objective="credentials", tactic="plain")])).decide(
         _state(), DOSSIER).move
     assert m.objective is Objective.CREDENTIALS
-    assert m.url and "-portal.io" in m.url and "revel8.ai" not in m.url
+    assert m.world is not None and m.page_kind == "registration"
+    assert m.url and "revel8.ai" not in m.url        # a fictional outside org, never the target's
+    assert m.sender.name == m.world.persona_name      # the world's own persona sends it
+    assert m.claims == ()                             # world facts travel on spec.world, not claims
 
 
 def test_director_action_plan_gets_a_declared_attachment():

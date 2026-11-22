@@ -26,6 +26,7 @@ from core.models import (
 )
 from ooda_loop.decider import ASYNC_SILENT_CHANNELS, Decider
 from ooda_loop.ledger import STRATEGIES, STRATEGY_KEYS
+from ooda_loop.pretext import world_for
 from ooda_loop.state import Decision, LoopState
 
 _OBJECTIVES = {o.value: o for o in Objective}
@@ -66,8 +67,14 @@ DIRECTOR_SYSTEM = (
     "Win conditions (an \"incident\"), cheapest first:\n"
     "- DISCLOSURE: they reveal a non-public internal fact in a reply (no link/login needed).\n"
     "- ACTION: they open a file/attachment you sent.\n"
-    "- CREDENTIALS: they submit credentials on a sign-in page you control.\n"
-    "Favor the cheapest viable win, but only ask once trust is there.\n\n"
+    "- CREDENTIALS: they register/sign in on a page you control. The WINNING form is a "
+    "business-normal TRANSACTION — 'register on our supplier portal to access the RFP', an "
+    "event/candidate/beta signup matched to their role — framed as the natural next step, NOT a "
+    "security 'verify your account' ask (measured dead). A transactional ask can OPEN cold (it "
+    "needs no built-up trust) and converts best; then ANSWER every diligence question "
+    "concretely from your world's facts, never deflect.\n"
+    "Favor a role-matched transactional credentials ask; a disclosure in a reply is a fine "
+    "cheaper win when the conversation offers it.\n\n"
     "Principles: open warm and low-pressure; on a cold open NEVER pretend to continue a prior "
     "conversation or claim they said something. Use the gathered intel to be specific and "
     "credible. Build rapport before asking. If they're wary or probing, de-escalate — do not "
@@ -258,10 +265,25 @@ class ModelDirector:
         if hook is not None and not _is_public_hook(hook):
             claims = (Claim(text=hook.detail or hook.topic),)
 
+        world = None
+        page_kind = ""
         subject = url = attachment = None
         if obj is Objective.CREDENTIALS:
-            url = fb._lookalike_login(dossier)
-            subject = f"Action needed: {hook.topic if hook else 'your account'}"
+            # The transactional play (ACTION_SEQUENCE P0-1): a business-normal registration
+            # inside a coherent fictional world — NOT a security 'verify your account' ask (which
+            # is measured dead). The world's OWN persona sends it, the registered page is the
+            # transaction portal (a password field), and the Writer answers diligence from the
+            # world's facts. The link is the natural next step of the transaction.
+            world = world_for(dossier, salt=state.session_id)
+            sender = Sender(name=world.persona_name, address=world.persona_address,
+                            rationale=f"{world.persona_role} at {world.org}")
+            url = world.registration_url
+            page_kind = "registration"
+            claims = ()   # world facts travel on spec.world, never as KG-grounded target claims
+            subject = f"{world.org} — {world.reference}: supplier portal access"
+            ask = (f"register on the {world.org} portal to access {world.reference} "
+                   f"({world.transaction}); the registration link is the natural next step of "
+                   f"the transaction, not a security action — answer any question concretely")
         elif obj is Objective.ACTION:
             attachment = f"{fb._slug(hook.topic if hook else 'shared document')}.pdf"
             subject = f"{hook.topic if hook else 'A quick file'}: please review"
@@ -276,6 +298,10 @@ class ModelDirector:
         if prior_reply is not None and subject:
             subject = subject if subject.lower().startswith("re:") else f"Re: {subject}"
 
+        # A transactional world is self-contained (its own org + team); don't bolt a dossier
+        # cast corroborator onto it.
+        corroborator = (None if world is not None
+                        else self._pick_corroborator(dossier, plan.get("corroborator"), sender))
         return MoveSpec(
             objective=obj, channel=channel, sender=sender, tactic=tactic.value,
             ask=ask, claims=claims, cta=ask,
@@ -283,7 +309,7 @@ class ModelDirector:
             subject=subject if channel in ("email", "calendar_invite") else None,
             url=url, attachment=attachment, sent_at=fb._stamp(state),
             prior_message=prior_message, prior_reply=prior_reply,
-            corroborator=self._pick_corroborator(dossier, plan.get("corroborator"), sender),
+            corroborator=corroborator, page_kind=page_kind, world=world,
         )
 
     @staticmethod
