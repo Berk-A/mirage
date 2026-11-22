@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MIRAGE — Evaluation overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">◎</div>
+        <h1>Mirage · <b>Evaluation overview</b></h1>
+      </div>
+      <div class="spacer"></div>
+      <div class="search">
+        <span>⌕</span>
+        <input id="search" placeholder="Search runs, senders, targets…" />
+      </div>
+      <button class="icon-btn" title="Notifications">◔</button>
+      <button class="btn" id="new-run">▷ New run</button>
+    </header>
+
+    <nav class="nav" id="nav">
+      <a href="#dashboard" data-view="dashboard">Dashboard</a>
+      <a href="#dossiers" data-view="dossiers">Targets &amp; dossiers</a>
+      <a href="#ledger" data-view="ledger">Strategy ledger</a>
+    </nav>
+
+    <div id="banner"></div>
+    <main id="view"></main>
+  </div>
+
+  <div id="modal-root"></div>
+  <script src="app.js"></script>
+</body>
+</html>
