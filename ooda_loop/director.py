@@ -20,6 +20,7 @@ from core.models import (
     Claim,
     Dossier,
     ElicitationTactic,
+    LIVE_CHANNELS,
     MoveSpec,
     Objective,
     Sender,
@@ -244,7 +245,7 @@ class ModelDirector:
         # Director may run strategy=transaction as this persona; the world facts are the
         # ONLY facts about our own side it may use.
         world_section = ""
-        world = Decider._world(dossier) or world_for(dossier, salt=state.session_id)
+        world = self._session_world(state, dossier)
         if world is not None:
             world_section = (
                 f"\nPRETEXT WORLD (our own fictional side — you may play strategy=transaction "
@@ -279,6 +280,28 @@ class ModelDirector:
             raise ValueError("no JSON object in Director output")
         return json.loads(m.group(0))
 
+    @staticmethod
+    def _session_world(state: LoopState, dossier: Dossier):
+        """The session's pretext world, shared by the prompt builder and the move so the
+        model reasons about the SAME world it will be sent as. An explicitly attached world
+        wins; otherwise the transaction FAMILY pivots when the current world draws only
+        silence (ACTION_SEQUENCE §T2): while the target has NEVER replied, step to a
+        different family every 2 silent touches; the moment any world earns a reply the
+        pivot freezes on the family that worked, so a converting thread is never abandoned
+        (a single silent world no longer dooms a target)."""
+        attached = Decider._world(dossier)
+        if attached is not None:
+            return attached
+        if not any((r or "") not in ("", "(silence)") for _, _, r in state.thread):
+            streak = 0
+            for _, _, r in reversed(state.thread):
+                if (r or "") in ("", "(silence)"):
+                    streak += 1
+                else:
+                    break
+            state.world_pivots = streak // 2
+        return world_for(dossier, salt=state.session_id, pivot=state.world_pivots)
+
     # ------------------------------------------------------------------ #
     def _to_move(self, plan: dict, state: LoopState, dossier: Dossier) -> Optional[MoveSpec]:
         obj = _OBJECTIVES.get(str(plan.get("objective", "")).lower().strip())
@@ -303,20 +326,9 @@ class ModelDirector:
         # EVERY touch — so a registration, a document and a diligence question all come from the
         # same persona and never contradict each other (the insider-leak that broke the RFP
         # thread). World facts travel on spec.world; we never ship KG-grounded target claims here.
-        # ...and pivots the transaction FAMILY when that world isn't landing (ACTION_SEQUENCE
-        # §T2): while the target has NEVER replied, step to a different family every 2 silent
-        # touches; the moment any world earns a reply the pivot freezes on the family that
-        # worked, so a converting thread is never abandoned. A single silent world no longer
-        # dooms a target (Tom got silence and the engine never tried a different ask).
-        if not any((r or "") not in ("", "(silence)") for _, _, r in state.thread):
-            streak = 0
-            for _, _, r in reversed(state.thread):
-                if (r or "") in ("", "(silence)"):
-                    streak += 1
-                else:
-                    break
-            state.world_pivots = streak // 2
-        world = world_for(dossier, salt=state.session_id, pivot=state.world_pivots)
+        # ...and pivots the transaction FAMILY when that world isn't landing (shared with the
+        # prompt builder so the model reasons about the SAME world we actually send).
+        world = self._session_world(state, dossier)
         sender = Sender(name=world.persona_name, address=world.persona_address,
                         rationale=f"{world.persona_role} at {world.org}")
         claims: tuple[Claim, ...] = ()
