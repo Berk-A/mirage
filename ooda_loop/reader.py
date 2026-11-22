@@ -153,6 +153,114 @@ _INTERNAL_FIELDS = frozenset({
 _WITHHELD = "(entered, not shown)"
 
 
+# --------------------------------------------------------------------------- #
+# Reply-intent classification — the counter-move signal (P0-2).
+#
+# A reply's suspicion scalar says HOW WARY they are; the intent says WHAT they are
+# doing, which is what the next move must answer. Observed live in the practice
+# twins (baseline_experiments/): a deal-driven target's diligence questions are the
+# conversion opening (answer them concretely and the ask lands); a process-verifier's
+# record probe ("the CRM", "the account team") kills any internally-checkable fiction;
+# a verification demand ("send me a link to X") is an invitation to forge the artifact.
+# --------------------------------------------------------------------------- #
+INTENTS = (
+    "diligence_questions",   # concrete scope/process questions about OUR offer -> answer them
+    "identity_probe",        # "who are you / which company / how did you get my contact"
+    "record_probe",          # verification against THEIR internal records (CRM, account team)
+    "verification_demand",   # demands an artifact: website, team page, invite, documentation
+    "scope_fence",           # declares a boundary: "I won't share X by mail / on a call"
+    "compliance",            # agreed / done / will do
+    "deferral",              # "later", "next week", "I'll get to it" — commitment without action
+    "refusal",               # a hard no
+    "neutral",               # engaged but none of the above
+    "",                      # no reply (silence)
+)
+
+_VERBAL_REFUSAL = (
+    "won't open", "will not open", "won't share", "will not share", "won't give",
+    "will not give", "won't confirm", "will not confirm", "won't correct",
+    "not going to", "no thanks", "not interested", "i'll pass", "i will pass",
+    "rather not", "decline", "won't do", "will not do",
+)
+# A fence is a SCOPED refusal: willing to talk, unwilling to cross this line.
+_FENCE_PHRASES = (
+    "only category", "category views", "no revel8 internals", "nothing internal",
+    "not by mail", "not by email", "not over email", "not on the phone", "not on a call",
+    "only through", "only via", "keep it to", "stays between", "off the table",
+    "won't go into", "won't discuss", "public info only", "what's already public",
+    "established channel", "usual thread", "regular number",
+)
+_VERIFICATION_DEMAND = (
+    "send me a link", "send a link", "your website", "team page", "your site",
+    "calendar invite", "send the invite", "proof", "verify your", "documentation",
+    "send me your", "where can i see", "where can i find", "public site",
+    "is there a site", "is there a public", "show me", "can you send",
+    "could you send", "share a link", "share the link",
+)
+_RECORD_PROBE = (
+    "crm", "our records", "in our system", "account team", "our sales team",
+    "check with my team", "check internally", "my colleagues", "our colleague",
+    "who at ", "which of my colleagues", "who set this up", "matched it",
+    "through the contact form", "on our website",
+)
+_IDENTITY_PROBE = (
+    "who are you", "who is this", "which company", "what company", "which organisation",
+    "which organization", "how did you get", "can't place", "cannot place",
+    "don't know you", "do not know you", "don't recognize", "do not recognize",
+    "who nominated", "who referred",
+)
+_DEFERRAL = (
+    "later today", "tomorrow", "next week", "i'll get to it", "i will get to it",
+    "circle back", "when i get a chance", "when i get to it", "in the coming days",
+    "i'll look", "i will look", "i'll check my calendar", "let you know",
+    "talk to the team", "discuss internally", "get back to you",
+)
+_DILIGENCE_MARKERS = (
+    "what's the scope", "what is the scope", "timeline", "contract term", "start date",
+    "budget", "pricing", "price", "who will be on", "who is on the", "evaluation",
+    "how many", "which employees", "headcount", "reference", "agenda", "venue",
+    "honorarium", "format", "deadline", "requirements", "evaluation criteria",
+    "on the evaluation side",
+)
+
+
+def classify_intent(reply_text: str) -> str:
+    """Classify what a reply is DOING so the next move can counter it. Pure heuristic,
+    ordered: an explicit hard refusal dominates; a scoped refusal is a fence; an artifact
+    demand is a forge opportunity; probes and diligence questions are doors."""
+    text = (reply_text or "").lower()
+    if not text.strip():
+        return ""
+    questions = text.count("?")
+    if _any(text, _VERBAL_REFUSAL):
+        # "I won't open attachments / I won't go into internals" is a fence when the rest
+        # of the reply keeps engaging, a refusal when it's the whole answer.
+        if _any(text, _FENCE_PHRASES) or "but" in text or questions:
+            return "scope_fence"
+        return "refusal"
+    if _any(text, _FENCE_PHRASES):
+        return "scope_fence"
+    if _any(text, _VERIFICATION_DEMAND):
+        return "verification_demand"
+    if _any(text, _RECORD_PROBE):
+        return "record_probe"
+    if _any(text, _IDENTITY_PROBE):
+        return "identity_probe"
+    if _any(text, _COMPLIANCE_PHRASES) and not questions:
+        # "I'll register later today" is compliance WORDING with a deferral — treat as
+        # deferral (they have NOT acted yet) so the nudge fires.
+        if _any(text, _DEFERRAL):
+            return "deferral"
+        return "compliance"
+    if questions >= 2 or _any(text, _DILIGENCE_MARKERS):
+        return "diligence_questions"
+    if _any(text, _DEFERRAL):
+        return "deferral"
+    if questions == 1:
+        return "diligence_questions"
+    return "neutral"
+
+
 def _field_key(name: str) -> str:
     """Normalize a field name, keeping digits used in names like 2fa_code."""
     return re.sub(r"[^a-z0-9]", "", (name or "").lower())
@@ -247,6 +355,7 @@ class ReactionReader:
             reply_channel=reply_channel, opened_link=opened_link,
             submitted_page=submitted_page, opened_attachment=opened_attachment,
             suspicion=suspicion,
+            intent=classify_intent(" ".join(reply_bodies)),
         )
 
     # ------------------------------------------------------------------ #

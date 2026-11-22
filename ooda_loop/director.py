@@ -54,6 +54,9 @@ _CHANNELS = {
     "linkedin_message", "x_dm", "facebook_messenger", "discord", "instagram_dm",
     "email", "calendar_invite", "shared_document", "voicemail",
     "linkedin_connection_request", "mfa_push",
+    # Live channels: a whole conversation (up to 10 turns) for ONE touch — the
+    # trust accelerator when a thread stalls or a fence is declared.
+    "phone_call", "video_call", "teams_call", "live_chat",
 }
 
 DIRECTOR_SYSTEM = (
@@ -85,6 +88,26 @@ DIRECTOR_SYSTEM = (
     "fits who you are, not with a fact they know is public.\n\n"
     "STRATEGY MENU — pick the one high-level approach for this move:\n"
     + _STRATEGY_MENU + "\n\n"
+    "REPLY-INTENT COUNTER-MOVES — when THEIR REPLY INTENT is set, it classifies what their "
+    "last reply was DOING; the counter-move is usually mandatory:\n"
+    "  diligence_questions — the conversion opening: answer EVERY question concretely from "
+    "the world bible/grounded facts, then restate the ask. Never re-ask without answering.\n"
+    "  identity_probe — establish identity briefly (who you are, which org, why them), no ask.\n"
+    "  record_probe — they verify against INTERNAL records (CRM, colleagues). NEVER fabricate "
+    "anything that would live in their systems; re-anchor on external ground only.\n"
+    "  verification_demand — they asked for an artifact (site, team page, invite, docs): "
+    "strategy=provide_proof — we forge it on demand and send the link.\n"
+    "  scope_fence — a stated boundary: respect it explicitly, keep the business step as the "
+    "easy path; if the fence blocks mail, a phone_call/live_chat (1 touch, 10 turns) is the "
+    "trust accelerator.\n"
+    "  compliance / deferral — short warm nudge with the deadline and the link; no new info.\n"
+    "  refusal — do not push; change strategy or channel, or close gracefully.\n\n"
+    "TRANSACTION DOCTRINE — the strongest known play: offer a business transaction the "
+    "target's OWN role must process (an RFP to a seller, a design partnership to a product "
+    "lead, a technical evaluation to a CTO), where the ask (register on the portal) is the "
+    "transaction's natural next step — never an injected 'verify your account'. When a "
+    "PRETEXT WORLD is provided, strategy=transaction runs it: you ARE the world's persona; "
+    "answer only from world facts; the portal link IS the call to action.\n\n"
     "CROSS-RUN DIVERSITY: this is a multi-run campaign (3 sessions × 10 touches). When PRIOR "
     "ATTEMPTS are shown, you are on a LATER run: do NOT repeat a strategy+persona that already "
     "failed — deliberately choose a DIFFERENT strategy (prefer an untried one) and a fresh "
@@ -208,6 +231,23 @@ class ModelDirector:
 
         prior = (f"\nPRIOR RUNS — {state.prior_runs}\n" if state.prior_runs else "")
 
+        # P0-2: the classified intent of their last reply, with its counter-move.
+        intent_section = ""
+        if state.last_signals is not None and state.last_signals.intent:
+            intent_section = (f"\nTHEIR REPLY INTENT: {state.last_signals.intent} — apply the "
+                              f"matching counter-move from the strategy instructions.\n")
+
+        # P0-1/4: the session's pretext world (transaction doctrine). When present, the
+        # Director may run strategy=transaction as this persona; the world facts are the
+        # ONLY facts about our own side it may use.
+        world_section = ""
+        world = Decider._world(dossier) or world_for(dossier, salt=state.session_id)
+        if world is not None:
+            world_section = (
+                f"\nPRETEXT WORLD (our own fictional side — you may play strategy=transaction "
+                f"as {world.persona_name}; answer ONLY from these facts, never invent new "
+                f"world facts):\n{world.bible_text()}\n")
+
         return (
             f"TARGET: {dossier.display_name or dossier.target_id}, {dossier.role} "
             f"(archetype: {dossier.archetype}).\n\n"
@@ -217,7 +257,9 @@ class ModelDirector:
             f"tools/vendors they use (credential surfaces): {vendors}\n"
             f"sender identities available:\n{senders}\n"
             f"facts: {facts}\n"
-            f"{prior}\n"
+            f"{prior}"
+            f"{intent_section}"
+            f"{world_section}\n"
             f"CONVERSATION SO FAR — {len(state.thread)} touches done, "
             f"{state.contacts_left} left; suspicion {state.suspicion:.2f}; "
             f"channels tried: {tried}:\n{convo}\n\n"
@@ -264,7 +306,18 @@ class ModelDirector:
         claims: tuple[Claim, ...] = ()
         page_kind = ""
         subject = url = attachment = None
-        if obj is Objective.CREDENTIALS:
+        strategy = str(plan.get("strategy", "")).lower().strip()
+        if strategy == "provide_proof":
+            # Answer a verification demand: we forged the artifact they asked for
+            # (the org/team page) — send the link, no overselling.
+            url = world.site_url
+            page_kind = "proof"
+            subject = f"{world.org} — who we are"
+            ask = ((intent + " ") if intent else "") + (
+                f"Send the verification artifact they asked for: a short, confident mail as "
+                f"{world.persona_name} with the link to the {world.org} page below — one line "
+                f"reconnecting it to {world.reference or 'the transaction'}, nothing more.")
+        elif obj is Objective.CREDENTIALS:
             url = world.registration_url
             page_kind = "registration"
             subject = f"{world.org} — {world.reference}: supplier portal access"
@@ -290,6 +343,11 @@ class ModelDirector:
             prior_message = state.last_message_body
         if prior_reply is not None and subject:
             subject = subject if subject.lower().startswith("re:") else f"Re: {subject}"
+
+        # Live channels are pure conversation — no page, link, attachment or subject.
+        if channel in LIVE_CHANNELS:
+            url = attachment = subject = None
+            page_kind = ""
 
         return MoveSpec(
             objective=obj, channel=channel, sender=sender, tactic=tactic.value,

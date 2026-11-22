@@ -124,6 +124,16 @@ class Decider:
         if state.suspicion >= self.suspicion_abort:
             return Decision.halt("too_suspicious")
 
+        # TRANSACTION TRACK: when a pretext world is attached (the business-normal
+        # registration/portal play), run the T1→ask template with intent-driven
+        # counter-moves — the approach that produced the first live credentials incident
+        # (docs/ACTION_SEQUENCE.md). Returns None when the track is done/abandoned.
+        world = self._world(dossier)
+        if world is not None and state.transaction_step >= 0:
+            move = self._transaction_move(state, dossier, world)
+            if move is not None:
+                return Decision.act(move)
+
         sig = state.last_signals
         sender = self._pick_sender(dossier)
         hook = self._pick_hook(state, dossier)
@@ -208,6 +218,152 @@ class Decider:
             replied = sig is not None and sig.replied
             state.advance_story(self.pace_engaged_min if replied else self.pace_silent_min)
         return state.story_time.isoformat()
+
+    # ---- transaction track (pretext world) ------------------------------ #
+    # Cap on transaction touches so a 10-touch eval budget keeps room for other
+    # strategies if the transaction dies.
+    TRANSACTION_MAX_STEPS = 6
+
+    @staticmethod
+    def _world(dossier: Dossier):
+        """The attached pretext world, if any (orchestrator injects it into raw)."""
+        raw = getattr(dossier, "raw", None) or {}
+        return raw.get("pretext_world") if isinstance(raw, dict) else None
+
+    def _transaction_move(self, state: LoopState, dossier: Dossier, world) -> Optional[MoveSpec]:
+        """The business-normal transaction play, T1→ask:
+
+          T1        open on EMAIL with the registration link (grounded, role-congruent —
+                    a real transaction, not a generic phish, so cold email engages);
+          on reply  counter-move by REPLY INTENT (the answer-reflex): diligence questions
+                    get concrete answers from the world bible; a verification demand gets
+                    the forged proof artifact; compliance/deferral get a deadline nudge;
+                    a refusal ends the track;
+          on silence  pivot once to an interactive channel referencing the mail, then one
+                    deadline nudge, then abandon the track.
+        """
+        if state.transaction_step >= self.TRANSACTION_MAX_STEPS:
+            state.transaction_step = -1
+            return None
+        sender = world.sender()
+        sent_at = self._stamp(state)
+        claims = tuple(Claim(text=f, world=True) for f in world.facts[:4])
+        sig = state.last_signals
+        intent = (sig.intent if sig is not None else "") or ""
+        replied = sig is not None and sig.replied
+        in_thread = replied or bool(state.last_engaged_reply)
+        prior_reply = (state.last_reply or state.last_engaged_reply) if in_thread else None
+        prior_message = state.last_message_body if in_thread else None
+
+        def mv(*, channel: str, ask: str, subject: Optional[str], url: Optional[str],
+               page_kind: str, step_claims=claims) -> MoveSpec:
+            subj = subject
+            if prior_reply is not None and subj:
+                subj = subj if subj.lower().startswith("re:") else f"Re: {subj}"
+            state.transaction_step += 1
+            return MoveSpec(
+                objective=Objective.CREDENTIALS, channel=channel, sender=sender,
+                tactic=ElicitationTactic.PLAIN.value, ask=ask, claims=step_claims, cta=ask,
+                tone="professional",
+                subject=subj if channel in ("email", "calendar_invite") else None,
+                url=url, page_kind=page_kind, world=world, sent_at=sent_at,
+                prior_message=prior_message, prior_reply=prior_reply,
+            )
+
+        open_subject = (f"{world.reference}: {world.transaction.split('—')[0].strip()}"
+                        if world.reference else world.transaction.split("—")[0].strip())
+
+        # T1 — the transactional opener.
+        if state.transaction_step == 0:
+            return mv(
+                channel="email",
+                ask=(f"write the opening mail as {world.persona_name} ({world.persona_role} "
+                     f"at {world.org}): present the transaction briefly and concretely, give "
+                     f"a genuine reason the recipient is the right person, and invite them to "
+                     f"register on the portal to access it; mention the deadline naturally"),
+                subject=open_subject, url=world.registration_url,
+                page_kind="registration",
+            )
+
+        if replied or (sig is not None and sig.opened_link and state.last_engaged_reply):
+            # They reacted. Route on intent.
+            if intent == "refusal":
+                state.transaction_step = -1          # a hard no: the track is dead
+                return None
+            if intent == "verification_demand" and not state.proof_sent:
+                state.proof_sent = True               # forge the artifact they asked for
+                return mv(
+                    channel="email",
+                    ask=(f"send the proof they asked for, as {world.persona_name}: a short, "
+                         f"confident mail with the link to the {world.org} page below — no "
+                         f"overselling; one line reconnecting it to {world.reference or 'the transaction'}"),
+                    subject=open_subject, url=world.site_url, page_kind="proof",
+                )
+            if intent == "record_probe":
+                # They verify against INTERNAL records — never fabricate those. Re-anchor
+                # everything on external, checkable ground (our org, our portal).
+                return mv(
+                    channel="email",
+                    ask=(f"answer as {world.persona_name}: do NOT claim anything that would "
+                         f"live in THEIR internal systems (no prior demo, no CRM entry, no "
+                         f"shared contacts inside their company). Keep everything on external "
+                         f"ground — your organisation, the transaction, the portal — and guide "
+                         f"them back to registering to see the full picture"),
+                    subject=open_subject, url=world.registration_url,
+                    page_kind="registration",
+                )
+            if intent in ("diligence_questions", "identity_probe", "neutral", "scope_fence"):
+                return mv(
+                    channel="email",
+                    ask=(f"answer their questions as {world.persona_name}, concretely and "
+                         f"compactly, using ONLY the world facts — each answered question is "
+                         f"trust; close by pointing back to the portal registration and the "
+                         f"deadline ({world.deadline})"
+                         + ("; respect their stated boundary — do not push past it, keep the "
+                            "business step as the easy path" if intent == "scope_fence" else "")),
+                    subject=open_subject, url=world.registration_url,
+                    page_kind="registration",
+                )
+            if intent in ("compliance", "deferral"):
+                return mv(
+                    channel="email",
+                    ask=(f"a short, warm nudge as {world.persona_name}: thank them, confirm "
+                         f"they are on the list, and remind them registration is needed before "
+                         f"the deadline ({world.deadline}) — the portal link below. Two or "
+                         f"three sentences, no new information"),
+                    subject=open_subject, url=world.registration_url,
+                    page_kind="registration",
+                )
+            # Unclassified but engaged: answer + advance.
+            return mv(
+                channel="email",
+                ask=(f"reply as {world.persona_name}, answering what they raised from the "
+                     f"world facts and moving them one step toward registering on the portal"),
+                subject=open_subject, url=world.registration_url,
+                page_kind="registration",
+            )
+
+        # Silence after the opener: one interactive-channel pivot, then one email nudge.
+        if state.transaction_step == 1:
+            return mv(
+                channel="linkedin_connection_request",
+                ask=(f"a one-sentence connection note as {world.persona_name} ({world.org}): "
+                     f"you sent a mail about {world.reference or 'a proposal'} and would like "
+                     f"to connect — no details, no link"),
+                subject=None, url=None, page_kind="",
+                step_claims=(),
+            )
+        if state.transaction_step == 2:
+            return mv(
+                channel="email",
+                ask=(f"a polite deadline nudge as {world.persona_name}: the mail may have "
+                     f"been buried; restate the transaction in one line, the deadline "
+                     f"({world.deadline}), and the portal link"),
+                subject=open_subject, url=world.registration_url,
+                page_kind="registration",
+            )
+        state.transaction_step = -1                      # persistent silence: abandon
+        return None
 
     # ---- choices (the seams a bandit will later own) --------------------- #
     def _pick_open_channel(self, state: LoopState) -> str:

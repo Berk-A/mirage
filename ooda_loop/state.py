@@ -89,6 +89,11 @@ class LoopState:
     # `story_time` and advances the clock so touches don't all land at once.
     story_start: datetime = field(default_factory=_story_anchor)
     story_minutes: int = 0
+    # Transaction track (pretext world): 0 = not opened yet, N = N transaction touches
+    # sent, -1 = abandoned (target refused or went persistently silent). proof_sent marks
+    # that the on-demand verification artifact (org/team page) was already forged.
+    transaction_step: int = 0
+    proof_sent: bool = False
 
     @property
     def contacts_left(self) -> int:

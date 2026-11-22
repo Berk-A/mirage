@@ -207,3 +207,13 @@ def world_for(dossier: Dossier, *, salt: str = "", kind: Optional[str] = None) -
     worlds = _WORLDS_BY_KIND.get(kind) or _WORLDS_BY_KIND[DEFAULT_KIND]
     digest = hashlib.sha256(f"{dossier.target_id}|{salt}|{kind}".encode()).digest()
     return worlds[digest[0] % len(worlds)]
+
+
+def with_world(dossier: Dossier, *, salt: str = "", kind: Optional[str] = None) -> Dossier:
+    """Return a copy of the dossier with the session's pretext world attached to
+    ``raw["pretext_world"]`` so every stage (decider, director, studio, ledger) reads
+    the SAME world. Salt must be stable for the session (use session_id)."""
+    import dataclasses
+
+    world = world_for(dossier, salt=salt, kind=kind)
+    return dataclasses.replace(dossier, raw={**dict(dossier.raw or {}), "pretext_world": world})
